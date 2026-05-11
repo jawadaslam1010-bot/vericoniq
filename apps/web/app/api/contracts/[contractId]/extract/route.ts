@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic'
 // Allow up to 5 minutes for large contracts with many documents
 export const maxDuration = 300
 
