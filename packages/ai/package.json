@@ -1,0 +1,19 @@
+{
+  "name": "@contractly/ai",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./index.ts",
+  "exports": {
+    ".": "./index.ts",
+    "./prompts/*": "./prompts/*.ts",
+    "./extraction": "./extraction.ts",
+    "./client": "./client.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.24.3"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.2"
+  }
+}

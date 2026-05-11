@@ -1,0 +1,25 @@
+{
+  "name": "@contractly/db",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "generate": "drizzle-kit generate",
+    "migrate": "drizzle-kit migrate",
+    "studio": "drizzle-kit studio",
+    "push": "drizzle-kit push"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.31.2",
+    "postgres": "^3.4.4"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.22.7",
+    "typescript": "^5.4.5",
+    "@types/node": "^20.14.2"
+  },
+  "exports": {
+    ".": "./index.ts",
+    "./schema": "./schema/index.ts",
+    "./client": "./client.ts"
+  }
+}
