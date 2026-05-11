@@ -3,7 +3,26 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": [
+        "DATABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_URL",
+        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_MODEL",
+        "RESEND_API_KEY",
+        "FROM_EMAIL",
+        "STRIPE_SECRET_KEY",
+        "STRIPE_WEBHOOK_SECRET",
+        "INNGEST_EVENT_KEY",
+        "INNGEST_SIGNING_KEY",
+        "AWS_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "CLAMAV_LAMBDA_FUNCTION_ARN",
+        "RATE_LIMIT_AI_REQUESTS_PER_HOUR"
+      ]
     },
     "dev": {
       "cache": false,
