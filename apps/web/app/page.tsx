@@ -246,7 +246,7 @@ export default function LandingPage() {
               fontFamily: 'var(--font-dm-serif), Georgia, serif',
             }}
           >
-            Built from two decades of frustration
+            Built by someone who has lived it — on both sides
           </h2>
 
           <div className="mt-6 space-y-5 text-base leading-relaxed" style={{ color: '#57534e' }}>
@@ -255,31 +255,29 @@ export default function LandingPage() {
               <strong style={{ color: '#1c1917' }}>
                 two decades in telecommunications and technology
               </strong>
-              , I have sat on both sides of the table — as a buyer managing large managed
+              , I have worked on both sides of the table — as a buyer managing large managed
               service providers, and as a vendor delivering complex contracted services to
               enterprise clients.
             </p>
             <p>
-              In all that time, one thing never changed: the way we managed service contracts
-              was{' '}
-              <strong style={{ color: '#1c1917' }}>completely ad hoc</strong>. Critical KPIs
-              buried in a schedule nobody had read in years. SLA obligations tracked in a
-              spreadsheet that three people had edited. Service credits either missed entirely
-              or disputed endlessly because nobody agreed on what the contract actually said.
+              That experience made one gap impossible to ignore. Contract performance management
+              had never been given the proper tooling it deserved.{' '}
+              <strong style={{ color: '#1c1917' }}>KPIs buried in schedules. Obligations
+              tracked in shared spreadsheets. Service credits left unclaimed</strong> because
+              nobody could quickly confirm what the contract actually required.
+              The knowledge was always there — it just took too long to surface.
             </p>
             <p>
               When AI reached the point where it could actually <em>read</em> these contracts
-              and extract structured meaning from them, I knew the moment had come. VericonIQ
-              started as a solution to the telco and managed services world I knew best — but
-              it quickly became clear that{' '}
-              <strong style={{ color: '#1c1917' }}>every sector has this problem</strong>.
-              Construction, facilities, IT, cloud, supply chain — anywhere there are
-              commercial contracts, there are missed obligations and deadlines that sneak up on
-              you.
+              and extract structured, reliable meaning from them, the opportunity was clear.
+              VericonIQ started in the telco and managed services world I know best, but the
+              need stretches well beyond it.{' '}
+              <strong style={{ color: '#1c1917' }}>Construction, facilities, IT, cloud,
+              supply chain</strong> — wherever there are commercial contracts, teams deserve
+              a system that keeps up with them.
             </p>
             <p>
-              So we are building something that works for{' '}
-              <strong style={{ color: '#1c1917' }}>all of it</strong>.
+              That is what we are building.
             </p>
           </div>
 
