@@ -123,7 +123,7 @@ export default function LandingPage() {
         style={{ backgroundColor: '#0d9488', color: 'white' }}
       >
         🎁 Share your feedback and get{' '}
-        <strong>3 months free</strong> when VericonIQ launches.{' '}
+        <strong>3 months free</strong> when VericonIQ launches — v2 live.{' '}
         <a href="#feedback" className="underline underline-offset-2 opacity-80 hover:opacity-100">
           Tell us what you need →
         </a>
