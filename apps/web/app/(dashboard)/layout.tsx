@@ -5,7 +5,9 @@ import { createClient } from '@/lib/supabase/server'
 import { db } from '@contractly/db'
 import { users } from '@contractly/db/schema'
 import { eq } from '@contractly/db'
-import { Navigation } from '@/components/shared/Navigation'
+import { Sidebar } from '@/components/shared/sidebar'
+import { TopBar } from '@/components/shared/top-bar'
+import { MobileTabBar } from '@/components/shared/mobile-tab-bar'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
@@ -24,22 +26,38 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .limit(1)
 
   if (!userRecord) {
-    // Auth user exists but no profile — likely signup DB tx failed
     redirect('/login?error=no_profile')
   }
 
+  const sessionUser = {
+    id: authUser.id,
+    email: authUser.email!,
+    fullName: userRecord.fullName,
+    role: userRecord.role as 'admin' | 'manager' | 'viewer',
+    orgId: userRecord.orgId,
+  }
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation
-        user={{
-          id: authUser.id,
-          email: authUser.email!,
-          fullName: userRecord.fullName,
-          role: userRecord.role as 'admin' | 'manager' | 'viewer',
-          orgId: userRecord.orgId,
-        }}
-      />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+    // Desktop: sidebar left, content right
+    // Mobile: top bar, scrollable content, bottom tab bar
+    <div className="flex h-screen overflow-hidden bg-page">
+
+      {/* Icon-rail sidebar — hidden on mobile */}
+      <Sidebar />
+
+      {/* Right column: top bar + scrollable main */}
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <TopBar user={sessionUser} />
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {children}
+          </div>
+        </main>
+
+        {/* Mobile bottom tab bar */}
+        <MobileTabBar />
+      </div>
     </div>
   )
 }
