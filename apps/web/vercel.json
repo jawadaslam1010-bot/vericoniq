@@ -1,4 +1,0 @@
-{
-  "buildCommand": "cd ../.. && pnpm turbo run build --filter=@contractly/web",
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile"
-}
