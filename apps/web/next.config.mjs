@@ -31,17 +31,9 @@ const nextConfig = {
     ]
   },
 
-  // Redirect HTTP → HTTPS in production
+  // Redirect HTTP → HTTPS in production (handled by Vercel automatically)
   async redirects() {
-    if (process.env.NODE_ENV !== 'production') return []
-    return [
-      {
-        source: '/:path*',
-        has: [{ type: 'header', key: 'x-forwarded-proto', value: 'http' }],
-        destination: 'https://app.contractly.com.au/:path*',
-        permanent: true,
-      },
-    ]
+    return []
   },
 }
 
