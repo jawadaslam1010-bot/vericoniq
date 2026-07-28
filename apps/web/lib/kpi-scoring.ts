@@ -68,10 +68,15 @@ export function scoreKpiResult(kpi: ScoringKpi, actualValue: string | null | und
 
   if (!met) return 'breach'
 
-  // Risk zone: cleared the threshold but within 5% of it.
-  const denom = Math.abs(target) || 1
-  const pct = op === 'gte' ? (actual - target) / denom : (target - actual) / denom
-  return pct < 0.05 ? 'risk' : 'met'
+  // Risk zone: cleared a one-sided threshold but within 5% of it. Only meaningful
+  // for gte/lte — a value inside a between-range or matching an eq target is a
+  // clean 'met'.
+  if (op === 'gte' || op === 'lte') {
+    const denom = Math.abs(target) || 1
+    const pct = op === 'gte' ? (actual - target) / denom : (target - actual) / denom
+    return pct < 0.05 ? 'risk' : 'met'
+  }
+  return 'met'
 }
 
 /**

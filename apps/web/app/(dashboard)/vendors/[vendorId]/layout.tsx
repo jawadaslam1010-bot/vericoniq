@@ -4,7 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@contractly/db'
-import { eq, and, isNull, desc } from '@contractly/db'
+import { eq, and, isNull, desc, inArray } from '@contractly/db'
 import { vendors, users, contracts, kpis, submissionPeriods, kpiResults } from '@contractly/db/schema'
 import { Upload, Zap } from 'lucide-react'
 import { VendorMark } from '@/components/shared/vendor-mark'
@@ -167,8 +167,20 @@ export default async function VendorDetailLayout({
     },
   ]
 
-  // Tab counts
-  const breachCount = 0 // stubbed until kpi_results
+  // Tab counts — open (non-exempt) breaches across this vendor's contracts
+  const contractIdArr = [...contractIds]
+  let breachCount = 0
+  if (contractIdArr.length > 0) {
+    const breachRows = await db
+      .select({ exemptionStatus: kpiResults.exemptionStatus })
+      .from(kpiResults)
+      .where(and(
+        eq(kpiResults.orgId, userRecord.orgId),
+        inArray(kpiResults.contractId, contractIdArr),
+        eq(kpiResults.resultStatus, 'breach'),
+      ))
+    breachCount = breachRows.filter(r => r.exemptionStatus !== 'approved').length
+  }
   const tabItems = [
     { id: 'overview',     label: 'Overview',     href: `/vendors/${vendorId}` },
     { id: 'contracts',    label: 'Contracts',    href: `/vendors/${vendorId}/contracts`,    count: activeContracts.length },

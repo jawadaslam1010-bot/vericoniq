@@ -23,6 +23,9 @@ export const contracts = pgTable(
     extractionStatus: text('extraction_status').notNull().default('pending'),
     aiExtractionNotes: text('ai_extraction_notes'),
     perspective: text('perspective').notNull().default('buyer'),
+    // Renewal reminders — track the last stage emailed (90 | 60 | 30 | 0) to avoid duplicates
+    renewalReminderStage: integer('renewal_reminder_stage'),
+    renewalReminderSentAt: timestamp('renewal_reminder_sent_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
   },

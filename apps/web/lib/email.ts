@@ -4,6 +4,32 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.FROM_EMAIL ?? 'submissions@vericoniq.com'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
+// Shared chrome so every transactional email looks consistent.
+function emailShell(bodyInner: string): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; margin: 0; padding: 32px 16px;">
+  <div style="max-width: 520px; margin: 0 auto; background: white; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;">
+    <div style="padding: 20px 28px; border-bottom: 1px solid #e5e7eb;">
+      <div style="display: inline-flex; align-items: center; gap: 10px;">
+        <div style="width: 28px; height: 28px; border-radius: 6px; background: #6366f1; display: inline-flex; align-items: center; justify-content: center;">
+          <span style="color: white; font-weight: bold; font-size: 11px;">V</span>
+        </div>
+        <span style="font-weight: 600; font-size: 14px; color: #111827;">VericonIQ</span>
+      </div>
+    </div>
+    <div style="padding: 32px 28px;">
+      ${bodyInner}
+      <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 24px 0;">
+      <p style="font-size: 11px; color: #d1d5db; margin: 0;">Sent by VericonIQ Contract Performance Platform</p>
+    </div>
+  </div>
+</body>
+</html>`.trim()
+}
+
 export async function sendPortalLink({
   to,
   vendorName,
@@ -220,5 +246,78 @@ export async function sendSubmissionNotification({
 </body>
 </html>
     `.trim(),
+  })
+}
+
+export async function sendRenewalReminder({
+  to,
+  contractName,
+  vendorName,
+  deadlineLabel,
+  daysRemaining,
+  deadlineType,
+  contractUrl,
+}: {
+  to: string
+  contractName: string
+  vendorName: string
+  deadlineLabel: string
+  daysRemaining: number
+  deadlineType: string
+  contractUrl: string
+}) {
+  const urgencyColor = daysRemaining <= 30 ? '#dc2626' : daysRemaining <= 60 ? '#d97706' : '#6366f1'
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Renewal notice — ${contractName} (${daysRemaining} days to ${deadlineType})`,
+    html: emailShell(`
+      <p style="font-size: 15px; color: #374151; margin: 0 0 6px; font-weight: 600;">Renewal deadline approaching</p>
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 24px; line-height: 1.6;">
+        The ${deadlineType} for <strong style="color: #374151;">${contractName}</strong>
+        (${vendorName}) is <strong style="color: ${urgencyColor};">${daysRemaining} days away</strong> — ${deadlineLabel}.
+        Review performance and decide whether to renew, renegotiate, or exit before the window closes.
+      </p>
+      <a href="${contractUrl}" style="display: inline-block; background: #6366f1; color: white; font-weight: 600; font-size: 14px; padding: 12px 24px; border-radius: 8px; text-decoration: none;">
+        Review contract →
+      </a>
+    `),
+  })
+}
+
+export async function sendInvitation({
+  to,
+  orgName,
+  inviterName,
+  role,
+  token,
+}: {
+  to: string
+  orgName: string
+  inviterName: string
+  role: string
+  token: string
+}) {
+  const url = `${APP_URL}/invite/${token}`
+  const roleLabel = role.charAt(0).toUpperCase() + role.slice(1)
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `You've been invited to ${orgName} on VericonIQ`,
+    html: emailShell(`
+      <p style="font-size: 15px; color: #374151; margin: 0 0 6px; font-weight: 600;">You've been invited to join ${orgName}</p>
+      <p style="font-size: 14px; color: #6b7280; margin: 0 0 24px; line-height: 1.6;">
+        ${inviterName} has invited you to join <strong style="color: #374151;">${orgName}</strong> on VericonIQ
+        as a <strong style="color: #374151;">${roleLabel}</strong>. Accept the invitation to set up your access.
+      </p>
+      <a href="${url}" style="display: inline-block; background: #6366f1; color: white; font-weight: 600; font-size: 14px; padding: 12px 24px; border-radius: 8px; text-decoration: none;">
+        Accept invitation →
+      </a>
+      <p style="font-size: 12px; color: #9ca3af; margin: 24px 0 0; line-height: 1.5;">
+        This invitation is unique to you and expires in 7 days. If you weren't expecting it, you can ignore this email.
+      </p>
+    `),
   })
 }

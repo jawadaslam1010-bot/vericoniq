@@ -8,7 +8,10 @@ const PUBLIC_PATHS = [
   '/signup',
   '/auth/callback',
   '/auth/confirm',
-  '/submit',       // vendor submission via magic link
+  '/portal',       // vendor submission via magic link
+  '/api/portal/',  // vendor portal API (token-authenticated)
+  '/invite',       // team invitation acceptance
+  '/api/invite/',  // invitation acceptance API
   '/api/auth/',    // auth API routes (signup, signout)
   '/api/waitlist', // waitlist form submission
 ]

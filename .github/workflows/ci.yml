@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.4.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        working-directory: apps/web
+        run: pnpm typecheck
+
+      - name: Unit tests
+        working-directory: apps/web
+        run: pnpm test
+
+      - name: Build
+        working-directory: apps/web
+        run: pnpm build
+        env:
+          # Placeholder values — the build only compiles (routes are dynamic and
+          # never connect at build time), so real secrets are not required in CI.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+          DATABASE_URL: postgresql://user:pass@localhost:5432/placeholder
+          NEXT_PUBLIC_APP_URL: https://vericoniq.com
