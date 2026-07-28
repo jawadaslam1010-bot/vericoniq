@@ -4,12 +4,13 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@contractly/db'
-import { eq, and, isNull } from '@contractly/db'
-import { vendors, users, contracts, kpis } from '@contractly/db/schema'
+import { eq, and, isNull, desc } from '@contractly/db'
+import { vendors, users, contracts, kpis, submissionPeriods, kpiResults } from '@contractly/db/schema'
 import { Upload, Zap } from 'lucide-react'
 import { VendorMark } from '@/components/shared/vendor-mark'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { VendorTabBar } from '@/components/shared/vendor-tab-bar'
+import { getClaimableCredits } from '@/lib/credits'
 import { cn } from '@/lib/utils'
 
 const SERVICE_TYPE_LABELS: Record<string, string> = {
@@ -78,16 +79,38 @@ export default async function VendorDetailLayout({
   ])
 
   const activeContracts = vendorContracts.filter(c => c.status === 'active')
-  const now = new Date()
+  const contractIds = new Set(vendorContracts.map(c => c.id))
 
-  // Summary strip calculations
-  const healthNum = vendor.healthScore != null ? parseFloat(vendor.healthScore) : null
+  // Health score — calculated from the most recent locked period across all vendor contracts
+  let healthNum: number | null = null
+  const latestLockedPeriod = await db
+    .select({ id: submissionPeriods.id, contractId: submissionPeriods.contractId })
+    .from(submissionPeriods)
+    .where(and(eq(submissionPeriods.orgId, userRecord.orgId), eq(submissionPeriods.status, 'locked')))
+    .orderBy(desc(submissionPeriods.periodEnd))
+    .then(rows => rows.find(p => contractIds.has(p.contractId)))
+
+  if (latestLockedPeriod) {
+    const results = await db
+      .select({ resultStatus: kpiResults.resultStatus, exemptionStatus: kpiResults.exemptionStatus })
+      .from(kpiResults)
+      .where(eq(kpiResults.periodId, latestLockedPeriod.id))
+
+    const total   = results.length
+    const met     = results.filter(r => r.resultStatus === 'met').length
+    const risk    = results.filter(r => r.resultStatus === 'risk').length
+    const exempt  = results.filter(r => r.exemptionStatus === 'approved' || r.resultStatus === 'exempt').length
+    const denom   = total - exempt
+    if (denom > 0) healthNum = Math.round(((met + risk) / denom) * 1000) / 10
+  }
+
   const healthTone = healthNum == null ? 'stale' : healthNum >= 80 ? 'met' : healthNum >= 60 ? 'risk' : 'breach'
 
   const totalAnnualValue = activeContracts.reduce((s, c) => s + parseFloat(c.annualValue ?? '0'), 0)
 
+  // Next renewal — prefer noticeDeadline, fall back to endDate
   const nextDeadline = activeContracts
-    .map(c => c.noticeDeadline)
+    .map(c => c.noticeDeadline ?? c.endDate)
     .filter(Boolean)
     .sort()[0]
   const daysToRenewal = daysFromNow(nextDeadline)
@@ -97,8 +120,13 @@ export default async function VendorDetailLayout({
     : 'met'
 
   // KPI count for this vendor's contracts
-  const contractIds = new Set(vendorContracts.map(c => c.id))
   const kpiCount = vendorKpis.filter(k => contractIds.has(k.contractId)).length
+
+  // Claimable service credits across this vendor's contracts (locked-period breaches)
+  const { total: creditsClaimable, count: creditsClaims } = await getClaimableCredits({
+    orgId: userRecord.orgId,
+    contractIds: [...contractIds],
+  })
 
   const pendingExtraction = vendorContracts.filter(c =>
     c.extractionStatus === 'processing' || c.extractionStatus === 'pending'
@@ -107,7 +135,7 @@ export default async function VendorDetailLayout({
   const summaryStrip = [
     {
       label: 'Health score',
-      value: healthNum != null ? String(Math.round(healthNum)) : '—',
+      value: healthNum != null ? `${healthNum}%` : '—',
       sub: healthNum != null
         ? healthNum >= 80 ? 'All KPIs on track'
         : healthNum >= 60 ? 'Some KPIs at risk'
@@ -131,9 +159,11 @@ export default async function VendorDetailLayout({
     },
     {
       label: 'Credits claimable',
-      value: '$0',
-      sub: 'No open claims',
-      tone: 'stale' as const,
+      value: creditsClaimable > 0 ? fmtValue(creditsClaimable) : '$0',
+      sub: creditsClaimable > 0
+        ? `Across ${creditsClaims} breached KPI${creditsClaims !== 1 ? 's' : ''}`
+        : 'No open claims',
+      tone: creditsClaimable > 0 ? ('breach' as const) : ('stale' as const),
     },
   ]
 

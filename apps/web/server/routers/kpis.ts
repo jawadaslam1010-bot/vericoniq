@@ -129,6 +129,7 @@ export const kpisRouter = router({
         targetValueMax: z.string().nullable().optional(),
         unitLabel: z.string().nullable().optional(),
         cadence: z.enum(['weekly', 'monthly', 'quarterly', 'annual']).optional(),
+        resultType: z.enum(['numeric', 'binary']).optional(),
         creditFormula: z.string().nullable().optional(),
         creditPerUnit: z.string().nullable().optional(),
         creditPercentMrc: z.string().nullable().optional(),

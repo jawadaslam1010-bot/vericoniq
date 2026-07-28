@@ -7,9 +7,6 @@ import { db } from '@contractly/db'
 import { users, vendors } from '@contractly/db/schema'
 import { contracts, kpis, contractKeyTerms } from '@contractly/db/schema'
 import { eq, and, asc } from '@contractly/db'
-import { ChevronRight } from 'lucide-react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { KpiReviewClient, ConfirmKpisButton } from '@/components/contracts/KpiReviewClient'
 
 export default async function KpisPage({
@@ -20,43 +17,25 @@ export default async function KpisPage({
   const { vendorId, contractId } = await params
 
   const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  if (!user) {
-    redirect('/login')
-  }
-
-  const [userRecord] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, user.id))
-    .limit(1)
-
-  if (!userRecord) {
-    redirect('/login')
-  }
+  const [userRecord] = await db.select().from(users).where(eq(users.id, user.id)).limit(1)
+  if (!userRecord) redirect('/login')
 
   const [contract] = await db
     .select()
     .from(contracts)
     .where(and(eq(contracts.id, contractId), eq(contracts.orgId, userRecord.orgId)))
     .limit(1)
-
-  if (!contract) {
-    notFound()
-  }
+  if (!contract) notFound()
 
   const [vendor] = await db
     .select()
     .from(vendors)
     .where(and(eq(vendors.id, contract.vendorId), eq(vendors.orgId, userRecord.orgId)))
     .limit(1)
-
-  if (!vendor) {
-    notFound()
-  }
+  if (!vendor) notFound()
 
   const kpiRows = await db
     .select()
@@ -67,52 +46,24 @@ export default async function KpisPage({
   const keyTermRows = await db
     .select()
     .from(contractKeyTerms)
-    .where(
-      and(
-        eq(contractKeyTerms.contractId, contractId),
-        eq(contractKeyTerms.orgId, userRecord.orgId),
-      ),
-    )
+    .where(and(eq(contractKeyTerms.contractId, contractId), eq(contractKeyTerms.orgId, userRecord.orgId)))
 
   const contractPath = `/vendors/${vendorId}/contracts/${contractId}`
-
   const isNotReady =
     contract.extractionStatus === 'pending' ||
     contract.extractionStatus === 'failed' ||
     contract.extractionStatus === 'processing'
 
   return (
-    <div className="space-y-6 p-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground">
-        <Link href="/vendors" className="hover:text-foreground transition-colors">
-          Vendors
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href={`/vendors/${vendorId}`} className="hover:text-foreground transition-colors">
-          {vendor.name}
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link
-          href={`/vendors/${vendorId}/contracts`}
-          className="hover:text-foreground transition-colors"
-        >
-          Contracts
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link href={contractPath} className="hover:text-foreground transition-colors">
-          {contract.name}
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-foreground font-medium">KPI Register</span>
-      </nav>
+    <div className="space-y-5">
 
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">KPI Register</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {kpiRows.length} KPIs · {keyTermRows.length} key terms
+          <h2 className="text-[17px] font-semibold text-ink">KPI Register</h2>
+          <p className="text-[12.5px] text-muted mt-0.5">
+            {contract.name}
+            {!isNotReady && ` · ${kpiRows.length} KPI${kpiRows.length !== 1 ? 's' : ''} · ${keyTermRows.length} key term${keyTermRows.length !== 1 ? 's' : ''}`}
           </p>
         </div>
         {kpiRows.length > 0 && <ConfirmKpisButton contractId={contractId} />}
@@ -120,49 +71,50 @@ export default async function KpisPage({
 
       {/* Not-ready states */}
       {isNotReady && (
-        <Card>
-          <CardContent className="py-6">
-            {contract.extractionStatus === 'processing' && (
-              <div className="flex flex-col gap-3">
-                <p className="font-medium">Extraction is currently in progress.</p>
-                <p className="text-sm text-muted-foreground">
-                  KPIs will appear here once extraction completes. Please check back shortly.
+        <div className="bg-surface border border-border rounded-lg p-6">
+          {contract.extractionStatus === 'processing' && (
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-status-risk-dot mt-1.5 animate-pulse shrink-0" />
+              <div>
+                <p className="text-[13px] font-semibold text-ink">Extraction in progress</p>
+                <p className="text-[12.5px] text-muted mt-1">
+                  KPIs will appear here once complete. This typically takes 1–3 minutes.
                 </p>
-                <div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={contractPath}>Back to contract</Link>
-                  </Button>
-                </div>
+                <Link href={contractPath} className="inline-block mt-3 text-[12.5px] font-medium text-primary hover:underline">
+                  ← Back to contract
+                </Link>
               </div>
-            )}
-            {contract.extractionStatus === 'pending' && (
-              <div className="flex flex-col gap-3">
-                <p className="font-medium">Extraction has not been run yet.</p>
-                <p className="text-sm text-muted-foreground">
-                  Return to the contract page and run AI extraction to populate this register.
+            </div>
+          )}
+          {contract.extractionStatus === 'pending' && (
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-faint mt-1.5 shrink-0" />
+              <div>
+                <p className="text-[13px] font-semibold text-ink">Extraction not yet run</p>
+                <p className="text-[12.5px] text-muted mt-1">
+                  Upload documents and run AI extraction from the contract page to populate this register.
                 </p>
-                <div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={contractPath}>Back to contract</Link>
-                  </Button>
-                </div>
+                <Link href={contractPath} className="inline-block mt-3 text-[12.5px] font-medium text-primary hover:underline">
+                  ← Go to contract
+                </Link>
               </div>
-            )}
-            {contract.extractionStatus === 'failed' && (
-              <div className="flex flex-col gap-3">
-                <p className="font-medium text-destructive">Extraction failed.</p>
-                <p className="text-sm text-muted-foreground">
-                  The extraction did not complete successfully. Return to the contract page to retry.
+            </div>
+          )}
+          {contract.extractionStatus === 'failed' && (
+            <div className="flex items-start gap-3">
+              <div className="w-2 h-2 rounded-full bg-status-breach-dot mt-1.5 shrink-0" />
+              <div>
+                <p className="text-[13px] font-semibold text-ink">Extraction failed</p>
+                <p className="text-[12.5px] text-muted mt-1">
+                  The extraction did not complete. Return to the contract page to retry.
                 </p>
-                <div>
-                  <Button asChild variant="outline" size="sm">
-                    <Link href={contractPath}>Back to contract</Link>
-                  </Button>
-                </div>
+                <Link href={contractPath} className="inline-block mt-3 text-[12.5px] font-medium text-primary hover:underline">
+                  ← Retry extraction
+                </Link>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Main content */}

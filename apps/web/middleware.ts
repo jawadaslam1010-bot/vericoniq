@@ -58,8 +58,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl)
   }
 
-  // Root — show landing page publicly; logged-in users go straight to dashboard
+  // Root — in development, skip the landing page and go straight to the app.
+  // In production, logged-in users go to /dashboard; everyone else sees the landing page.
   if (pathname === '/') {
+    if (process.env.NODE_ENV === 'development') {
+      const target = request.nextUrl.clone()
+      target.pathname = user ? '/dashboard' : '/login'
+      return NextResponse.redirect(target)
+    }
     if (user) {
       const target = request.nextUrl.clone()
       target.pathname = '/dashboard'
