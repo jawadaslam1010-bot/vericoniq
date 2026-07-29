@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { eq, and, count, desc } from '@contractly/db'
 import { router, viewerProcedure, managerProcedure } from '../trpc'
 import { contracts, contractDocuments, kpis } from '@contractly/db/schema'
+import { assertCanCreate, assertCanUpload } from '@/lib/billing/limits'
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,9 @@ export const contractsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Plan limits + free-tier expiry
+      await assertCanCreate(ctx.user.orgId, 'contract')
+
       const [contract] = await ctx.db
         .insert(contracts)
         .values({
@@ -167,6 +171,9 @@ export const contractsRouter = router({
       if (!contract) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Contract not found' })
       }
+
+      // Per-file and total-storage plan limits + free-tier expiry
+      await assertCanUpload(ctx.user.orgId, input.fileSizeBytes ?? 0)
 
       const [document] = await ctx.db
         .insert(contractDocuments)

@@ -14,13 +14,14 @@ const PUBLIC_PATHS = [
   '/api/invite/',  // invitation acceptance API
   '/api/auth/',    // auth API routes (signup, signout)
   '/api/waitlist', // waitlist form submission
+  '/api/stripe/',  // Stripe webhooks (signature-verified)
 ]
 
 // Beta gate — when BETA_GATE_PASSWORD is set, the whole site sits behind a
 // shared password. Token-protected flows (cron, vendor portal, invitations) are
 // exempt so they still work for external testers. Unset the env var to remove
 // the gate entirely.
-const BETA_EXEMPT_PREFIXES = ['/beta', '/api/beta', '/api/cron', '/portal', '/api/portal', '/invite', '/api/invite']
+const BETA_EXEMPT_PREFIXES = ['/beta', '/api/beta', '/api/cron', '/api/stripe', '/portal', '/api/portal', '/invite', '/api/invite']
 
 export async function middleware(request: NextRequest) {
   const { pathname: earlyPath } = request.nextUrl

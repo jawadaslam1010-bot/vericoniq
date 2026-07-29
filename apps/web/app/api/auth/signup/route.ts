@@ -62,6 +62,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Create organisation using Supabase Admin API (bypasses RLS)
+    // Free tier expires 3 months after signup (PLAN_LIMITS.starter.expiryMonths)
+    const trialEndsAt = new Date()
+    trialEndsAt.setMonth(trialEndsAt.getMonth() + 3)
+
     const { data: org, error: orgError } = await supabase
       .from('organisations')
       .insert({
@@ -69,6 +73,7 @@ export async function POST(req: NextRequest) {
         abn: abn ?? null,
         plan: 'starter',
         org_type: 'buyer',
+        trial_ends_at: trialEndsAt.toISOString(),
       })
       .select()
       .single()

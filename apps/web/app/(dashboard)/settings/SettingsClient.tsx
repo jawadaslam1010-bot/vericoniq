@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2, UserPlus, X, Shield } from 'lucide-react'
 import { api } from '@/lib/trpc/client'
+import { BillingSection } from './BillingSection'
 
 type Role = 'admin' | 'manager' | 'viewer'
 
@@ -19,6 +20,7 @@ export function SettingsClient({ currentRole }: { currentRole: Role }) {
   return (
     <div className="space-y-8">
       <OrgProfile isAdmin={isAdmin} />
+      <BillingSection isAdmin={isAdmin} />
       <TeamMembers isAdmin={isAdmin} />
     </div>
   )

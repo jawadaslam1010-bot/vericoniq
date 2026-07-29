@@ -53,10 +53,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/login?error=no_profile')
   }
 
-  // Load org for impersonation banner
-  const [orgRecord] = impersonation
-    ? await db.select({ name: organisations.name }).from(organisations).where(eq(organisations.id, userRecord.orgId)).limit(1)
-    : [null]
+  // Load org — used for the impersonation banner and free-tier expiry notice
+  const [orgRecord] = await db
+    .select({ name: organisations.name, plan: organisations.plan, trialEndsAt: organisations.trialEndsAt })
+    .from(organisations)
+    .where(eq(organisations.id, userRecord.orgId))
+    .limit(1)
+
+  // Free-tier expiry notice (starter plans only)
+  let trialNotice: { kind: 'expired' | 'ending'; days: number } | null = null
+  if (orgRecord?.plan === 'starter' && orgRecord.trialEndsAt) {
+    const days = Math.ceil((new Date(orgRecord.trialEndsAt).getTime() - Date.now()) / 86_400_000)
+    if (days < 0) trialNotice = { kind: 'expired', days: 0 }
+    else if (days <= 14) trialNotice = { kind: 'ending', days }
+  }
 
   const sessionUser = {
     id: userRecord.id,
@@ -74,6 +84,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
           viewingAs={userRecord.fullName ?? 'Unknown user'}
           orgName={orgRecord?.name ?? 'Unknown org'}
         />
+      )}
+
+      {/* Free-tier expiry notice */}
+      {trialNotice && !impersonation && (
+        <div className={`w-full px-4 py-2 text-[12.5px] text-center ${
+          trialNotice.kind === 'expired'
+            ? 'bg-status-breach-bg text-status-breach-text'
+            : 'bg-status-risk-bg text-status-risk-text'
+        }`}>
+          {trialNotice.kind === 'expired'
+            ? 'Your free tier has ended — your data is read-only. '
+            : `Your free tier ends in ${trialNotice.days} day${trialNotice.days !== 1 ? 's' : ''}. `}
+          <a href="/settings" className="font-semibold underline underline-offset-2">Upgrade to Pro</a>
+        </div>
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
