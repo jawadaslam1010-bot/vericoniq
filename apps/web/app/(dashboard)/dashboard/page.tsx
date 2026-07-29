@@ -622,10 +622,15 @@ function DashboardSkeleton() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// DashboardData is an async Server Component. React 18's JSX types don't model
+// async functions as element types (next build rejects it even though tsc is
+// happy), so cast for the type checker — Next streams it correctly at runtime.
+const DashboardStream = DashboardData as unknown as () => JSX.Element
+
 export default function DashboardPage() {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardData />
+      <DashboardStream />
     </Suspense>
   )
 }
