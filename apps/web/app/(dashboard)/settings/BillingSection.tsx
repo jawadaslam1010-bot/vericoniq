@@ -94,7 +94,7 @@ export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
                 className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-white text-[13px] font-semibold px-4 py-2 hover:bg-primary-hover disabled:opacity-50"
               >
                 {busy === 'monthly' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                Upgrade to Pro — $149/mo
+                Upgrade to Pro — $299/mo
               </button>
               <button
                 onClick={() => { setBusy('annual'); checkout.mutate({ interval: 'annual' }) }}
@@ -102,7 +102,7 @@ export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
                 className="inline-flex items-center gap-1.5 rounded-lg border border-border text-[13px] font-medium text-ink-soft px-4 py-2 hover:bg-hover disabled:opacity-50"
               >
                 {busy === 'annual' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Annual — $1,490/yr (2 months free)
+                Annual — $2,990/yr (2 months free)
               </button>
             </>
           )}
