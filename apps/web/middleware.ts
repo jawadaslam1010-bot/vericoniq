@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Public routes — no authentication required
 const PUBLIC_PATHS = [
   '/',             // landing page
+  '/about',        // public about page (also beta-gate exempt)
   '/login',
   '/signup',
   '/auth/callback',
@@ -21,7 +22,7 @@ const PUBLIC_PATHS = [
 // shared password. Token-protected flows (cron, vendor portal, invitations) are
 // exempt so they still work for external testers. Unset the env var to remove
 // the gate entirely.
-const BETA_EXEMPT_PREFIXES = ['/beta', '/api/beta', '/api/cron', '/api/stripe', '/portal', '/api/portal', '/invite', '/api/invite']
+const BETA_EXEMPT_PREFIXES = ['/beta', '/about', '/api/beta', '/api/cron', '/api/stripe', '/portal', '/api/portal', '/invite', '/api/invite']
 
 export async function middleware(request: NextRequest) {
   const { pathname: earlyPath } = request.nextUrl

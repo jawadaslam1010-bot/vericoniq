@@ -48,7 +48,8 @@ function BetaGate() {
           </div>
           <h1 className="font-serif text-[22px] text-ink">Private beta</h1>
           <p className="text-[14px] text-muted mt-2 leading-relaxed">
-            VericonIQ isn&apos;t open to the public yet. Enter the beta password to continue.
+            VericonIQ isn&apos;t open to the public yet. Enter the beta password to continue, or{' '}
+            <a href="/about" className="text-primary font-medium hover:underline">learn more about VericonIQ</a>.
           </p>
           <form onSubmit={handleSubmit} className="mt-6 space-y-3">
             <input
