@@ -7,7 +7,10 @@ import { Loader2, Lock } from 'lucide-react'
 function BetaGate() {
   const router = useRouter()
   const search = useSearchParams()
-  const next = search.get('next') || '/'
+  // Inside the gate the public landing page is irrelevant — send root arrivals
+  // to sign-in (middleware bounces already-authed users on to /dashboard).
+  const rawNext = search.get('next') || '/'
+  const next = rawNext === '/' ? '/login' : rawNext
 
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)

@@ -84,9 +84,11 @@ export async function middleware(request: NextRequest) {
   }
 
   // Root — in development, skip the landing page and go straight to the app.
-  // In production, logged-in users go to /dashboard; everyone else sees the landing page.
+  // While the beta gate is on, anyone who has passed it gets the app, not the
+  // marketing page. In production otherwise, logged-in users go to /dashboard;
+  // everyone else sees the landing page.
   if (pathname === '/') {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === 'development' || process.env.BETA_GATE_PASSWORD) {
       const target = request.nextUrl.clone()
       target.pathname = user ? '/dashboard' : '/login'
       return NextResponse.redirect(target)
