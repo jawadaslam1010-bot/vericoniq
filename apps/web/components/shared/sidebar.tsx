@@ -50,15 +50,17 @@ export function Sidebar() {
             <Link
               key={item.id}
               href={item.href}
-              title={item.label}
               className={cn(
-                'w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-180',
+                'group relative w-10 h-10 rounded-lg flex items-center justify-center transition-colors duration-180',
                 active
                   ? 'bg-primary-50 text-primary'
                   : 'text-ink-soft hover:bg-hover hover:text-ink'
               )}
             >
               <Icon className={cn('h-[18px] w-[18px]', active && 'stroke-[1.9]')} />
+              <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-md bg-ink px-2.5 py-1.5 text-[11.5px] font-medium text-white opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 shadow-md">
+                {item.label}
+              </span>
             </Link>
           )
         })}
@@ -68,10 +70,12 @@ export function Sidebar() {
       <div className="flex items-center justify-center pb-4 px-[10px]">
         <Link
           href="/settings"
-          title="Settings"
-          className="w-10 h-10 rounded-lg flex items-center justify-center text-muted hover:bg-hover hover:text-ink transition-colors duration-180"
+          className="group relative w-10 h-10 rounded-lg flex items-center justify-center text-muted hover:bg-hover hover:text-ink transition-colors duration-180"
         >
           <Settings className="h-[18px] w-[18px]" />
+          <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-md bg-ink px-2.5 py-1.5 text-[11.5px] font-medium text-white opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 shadow-md">
+            Settings
+          </span>
         </Link>
       </div>
     </aside>
