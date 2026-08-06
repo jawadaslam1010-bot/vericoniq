@@ -6,6 +6,7 @@ import { keyTermsRouter } from './keyTerms'
 import { submissionsRouter } from './submissions'
 import { teamRouter } from './team'
 import { billingRouter } from './billing'
+import { searchRouter } from './search'
 
 export const appRouter = router({
   vendors: vendorsRouter,
@@ -15,6 +16,7 @@ export const appRouter = router({
   submissions: submissionsRouter,
   team: teamRouter,
   billing: billingRouter,
+  search: searchRouter,
 })
 
 export type AppRouter = typeof appRouter

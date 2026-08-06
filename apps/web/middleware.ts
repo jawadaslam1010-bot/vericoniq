@@ -30,7 +30,9 @@ export async function middleware(request: NextRequest) {
   const betaPassword = process.env.BETA_GATE_PASSWORD
   if (betaPassword) {
     const hasBetaAccess = request.cookies.get('viq_beta')?.value === betaPassword
-    const isExempt = BETA_EXEMPT_PREFIXES.some(p => earlyPath === p || earlyPath.startsWith(p + '/') || earlyPath.startsWith(p))
+    // '/' and '/about' stay public — marketing pages; the app itself is gated.
+    const isExempt = earlyPath === '/' || earlyPath === '/about'
+      || BETA_EXEMPT_PREFIXES.some(p => earlyPath === p || earlyPath.startsWith(p + '/') || earlyPath.startsWith(p))
     if (!hasBetaAccess && !isExempt) {
       const url = request.nextUrl.clone()
       url.pathname = '/beta'
@@ -83,16 +85,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl)
   }
 
-  // Root — in development, skip the landing page and go straight to the app.
-  // While the beta gate is on, anyone who has passed it gets the app, not the
-  // marketing page. In production otherwise, logged-in users go to /dashboard;
-  // everyone else sees the landing page.
+  // Root — logged-in users go straight to the app; everyone else sees the
+  // marketing landing page (public even while the beta gate is on — the app
+  // routes themselves stay gated).
   if (pathname === '/') {
-    if (process.env.NODE_ENV === 'development' || process.env.BETA_GATE_PASSWORD) {
-      const target = request.nextUrl.clone()
-      target.pathname = user ? '/dashboard' : '/login'
-      return NextResponse.redirect(target)
-    }
     if (user) {
       const target = request.nextUrl.clone()
       target.pathname = '/dashboard'
