@@ -41,6 +41,7 @@ Return ONLY valid JSON matching this exact structure — no markdown, no explana
       "unit": "% | hours | days | count | $ | custom",
       "unit_label": "string — display label e.g. '% monthly average'",
       "cadence": "weekly | monthly | quarterly | annual",
+      "result_type": "numeric | binary — numeric if performance is measured by a number (%, hours, count etc); binary if outcome is simply met or not met (e.g. report submitted, audit passed, register maintained)",
       "credit_formula": "string | null — plain text description of credit calculation",
       "credit_per_unit": number | null,
       "credit_percent_mrc": number | null,
@@ -60,6 +61,19 @@ Return ONLY valid JSON matching this exact structure — no markdown, no explana
       "flag_reason": "string | null — ambiguity | trap | gap | conflict"
     }
   ],
+  "contract_details": {
+    "contract_number": "string | null",
+    "start_date": "YYYY-MM-DD | null",
+    "end_date": "YYYY-MM-DD | null",
+    "notice_period_days": number | null,
+    "notice_deadline": "YYYY-MM-DD | null",
+    "auto_renewal": boolean | null,
+    "auto_renewal_months": number | null,
+    "annual_value": number | null,
+    "monthly_value": number | null,
+    "total_contract_value": number | null,
+    "currency": "AUD | USD | EUR | GBP | NZD | null"
+  },
   "conflicts": [
     {
       "description": "string — what conflicts between which documents",
@@ -91,6 +105,20 @@ Always extract credit caps. Look for phrases like "not to exceed", "capped at", 
 - KPI targets that appear commercially unreasonable
 - Liability caps that are unusually low
 - Conflicts between documents
+
+## CONTRACT DETAILS EXTRACTION RULES
+Extract the following from the contract. If nothing is found for all fields, return contract_details as null.
+
+- contract_number: look for "Contract No.", "Agreement No.", "Reference No.", header identifiers on the cover page.
+- start_date / end_date: look for "Commencement Date", "Effective Date", "Start Date", "Expiry Date", "End Date", "Term ends". Return as YYYY-MM-DD. Convert written dates (e.g. "1 January 2023" → "2023-01-01").
+- notice_period_days: number of days written notice required before termination or non-renewal. Convert if stated in weeks/months (3 months → 90, 6 weeks → 42, 1 month → 30).
+- notice_deadline: only populate if the contract explicitly states a specific calendar deadline for giving notice (e.g. "Notice must be given by 1 October 2025"). Do NOT calculate this — leave null if not explicitly stated.
+- auto_renewal: true if the contract automatically renews unless notice is given. false if it expires.
+- auto_renewal_months: the renewal term length in months (e.g. "renews for successive 12-month periods" → 12).
+- annual_value: the recurring annual charge ex-GST. Look for "Annual Charge", "Annual Fee", "per annum", "p.a.", "yearly". If only a monthly value is found, derive annual by multiplying by 12.
+- monthly_value: the recurring monthly charge ex-GST. Look for "MRC", "Monthly Recurring Charge", "Monthly Fee", "per month", "/month". If only an annual value is found, derive monthly by dividing by 12 (round to nearest dollar).
+- total_contract_value: total value over the full term only if explicitly stated (e.g. "Total Contract Value $1.2M"). Leave null if not explicit.
+- currency: default to AUD if not specified. Look for "$", "AUD", "USD" etc.
 
 Extract every distinct KPI and obligation. Where multiple schedules define the same KPI (e.g. the same uptime metric across several service lines), consolidate them into one entry rather than repeating them. Keep ALL text fields extremely concise: descriptions under 40 words, credit_formula under 20 words. If a value is not specified in the contract, use null.`
 }

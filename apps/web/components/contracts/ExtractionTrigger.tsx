@@ -4,16 +4,17 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { Cpu, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { Cpu, CheckCircle, AlertCircle, Loader2, AlertTriangle } from 'lucide-react'
 
 interface Props {
   contractId: string
   vendorId: string
   extractionStatus: string
   kpiCount: number
+  termCount?: number
 }
 
-export function ExtractionTrigger({ contractId, vendorId, extractionStatus, kpiCount }: Props) {
+export function ExtractionTrigger({ contractId, vendorId, extractionStatus, kpiCount, termCount = 0 }: Props) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
@@ -32,6 +33,7 @@ export function ExtractionTrigger({ contractId, vendorId, extractionStatus, kpiC
         setIsLoading(false)
         return
       }
+      setIsLoading(false)
       router.refresh()
     } catch {
       toast.error('Could not reach the server. Please try again.')
@@ -59,22 +61,59 @@ export function ExtractionTrigger({ contractId, vendorId, extractionStatus, kpiC
   }
 
   if (extractionStatus === 'complete') {
+    const nothingFound = kpiCount === 0 && termCount === 0
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-6">
+      <div className={`rounded-lg border p-6 ${nothingFound ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <CheckCircle className="h-5 w-5 text-green-600" />
+            {nothingFound
+              ? <AlertTriangle className="h-5 w-5 text-amber-500 shrink-0" />
+              : <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
+            }
             <div>
-              <p className="font-medium text-green-800">Extraction complete</p>
-              <p className="text-sm text-green-700">{kpiCount} KPIs extracted</p>
+              <p className={`font-medium ${nothingFound ? 'text-amber-800' : 'text-green-800'}`}>
+                {nothingFound ? 'Nothing found' : 'Extraction complete'}
+              </p>
+              <p className={`text-sm ${nothingFound ? 'text-amber-700' : 'text-green-700'}`}>
+                {nothingFound
+                  ? 'No KPIs or key terms detected. Check that your documents are contract files with readable text.'
+                  : `${kpiCount} KPIs extracted`
+                }
+              </p>
             </div>
           </div>
-          <Link href={`/vendors/${vendorId}/contracts/${contractId}/kpis`}>
-            <Button variant="default" size="sm">
-              View KPI Register
+          <div className="flex items-center gap-2 shrink-0">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={runExtraction}
+              disabled={isLoading}
+              className="border-green-300 text-green-700 hover:bg-green-100"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Re-running…
+                </>
+              ) : (
+                <>
+                  <Cpu className="mr-2 h-4 w-4" />
+                  Re-run
+                </>
+              )}
             </Button>
-          </Link>
+            <Link href={`/vendors/${vendorId}/contracts/${contractId}/kpis`}>
+              <Button variant="default" size="sm">
+                View KPI Register
+              </Button>
+            </Link>
+          </div>
         </div>
+        {isLoading && (
+          <p className="text-xs text-green-700 border-t border-green-200 pt-3 mt-3">
+            ⏱ Re-running extraction — this will replace existing unactivated KPIs. Takes 1–3 minutes.
+          </p>
+        )}
       </div>
     )
   }

@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { eq, and, count, desc } from '@contractly/db'
 import { router, viewerProcedure, managerProcedure } from '../trpc'
 import { contracts, contractDocuments, kpis } from '@contractly/db/schema'
+import { assertCanCreate, assertCanUpload } from '@/lib/billing/limits'
 
 // ─── Router ───────────────────────────────────────────────────────────────────
 
@@ -89,6 +90,9 @@ export const contractsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Plan limits + free-tier expiry
+      await assertCanCreate(ctx.user.orgId, 'contract')
+
       const [contract] = await ctx.db
         .insert(contracts)
         .values({
@@ -153,6 +157,7 @@ export const contractsRouter = router({
         docType: z.enum(['msa', 'schedule', 'annexure', 'amendment', 'other']),
         hierarchyOrder: z.number().int().min(0).max(10),
         storagePath: z.string(),
+        originalStoragePath: z.string().optional(),
         fileSizeBytes: z.number().int().optional(),
       })
     )
@@ -167,6 +172,9 @@ export const contractsRouter = router({
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Contract not found' })
       }
 
+      // Per-file and total-storage plan limits + free-tier expiry
+      await assertCanUpload(ctx.user.orgId, input.fileSizeBytes ?? 0)
+
       const [document] = await ctx.db
         .insert(contractDocuments)
         .values({
@@ -176,6 +184,7 @@ export const contractsRouter = router({
           docType: input.docType,
           hierarchyOrder: input.hierarchyOrder,
           storagePath: input.storagePath,
+          originalStoragePath: input.originalStoragePath ?? null,
           fileSizeBytes: input.fileSizeBytes ?? null,
           uploadedBy: ctx.user.id,
         })
@@ -272,6 +281,47 @@ export const contractsRouter = router({
         .where(and(eq(contractDocuments.id, input.documentId), eq(contractDocuments.orgId, ctx.user.orgId)))
 
       return { success: true, storagePath: existing.storagePath }
+    }),
+
+  // Update all editable contract details (dates, notice, renewal, financials)
+  updateDetails: managerProcedure
+    .input(
+      z.object({
+        id: z.string().uuid(),
+        contractNumber: z.string().nullable().optional(),
+        startDate: z.string().nullable().optional(),
+        endDate: z.string().nullable().optional(),
+        noticePeriodDays: z.number().int().min(0).nullable().optional(),
+        noticeDeadline: z.string().nullable().optional(),
+        autoRenewal: z.boolean().optional(),
+        autoRenewalMonths: z.number().int().min(1).nullable().optional(),
+        annualValue: z.string().nullable().optional(),
+        monthlyValue: z.string().nullable().optional(),
+        currency: z.string().min(3).max(3).optional(),
+        perspective: z.enum(['buyer', 'vendor']).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const [existing] = await ctx.db
+        .select({ id: contracts.id })
+        .from(contracts)
+        .where(and(eq(contracts.id, input.id), eq(contracts.orgId, ctx.user.orgId)))
+        .limit(1)
+      if (!existing) throw new TRPCError({ code: 'NOT_FOUND', message: 'Contract not found' })
+
+      const { id, ...fields } = input
+      const setFields: Record<string, unknown> = { updatedAt: new Date() }
+      for (const [key, val] of Object.entries(fields)) {
+        if (val !== undefined) setFields[key] = val
+      }
+
+      const [updated] = await ctx.db
+        .update(contracts)
+        .set(setFields)
+        .where(and(eq(contracts.id, id), eq(contracts.orgId, ctx.user.orgId)))
+        .returning()
+
+      return updated
     }),
 
   // Hard delete a contract (cascade removes children)

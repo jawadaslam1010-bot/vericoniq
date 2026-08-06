@@ -5,22 +5,14 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@contractly/db'
 import { users, vendors } from '@contractly/db/schema'
-import { contracts, contractDocuments, kpis } from '@contractly/db/schema'
+import { contracts, contractDocuments, kpis, contractKeyTerms } from '@contractly/db/schema'
 import { eq, and, asc, count } from '@contractly/db'
-import { ChevronRight } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { formatDate } from '@/lib/utils'
 import { DocumentUploadPanel } from '@/components/contracts/DocumentUploadPanel'
 import { ExtractionTrigger } from '@/components/contracts/ExtractionTrigger'
 import { DocumentList } from '@/components/contracts/DocumentList'
-
-function formatCurrency(value: string | null, currency: string) {
-  if (!value) return '—'
-  return new Intl.NumberFormat('en-AU', { style: 'currency', currency }).format(Number(value))
-}
-
+import { ContractDetailsPanel } from '@/components/contracts/ContractDetailsPanel'
+import { AiNotes } from '@/components/contracts/AiNotes'
+import { StatusBadge } from '@/components/ui/status-badge'
 
 export default async function ContractDetailPage({
   params,
@@ -30,18 +22,10 @@ export default async function ContractDetailPage({
   const { vendorId, contractId } = await params
 
   const supabase = await createClient()
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser()
-
+  const { data: { user: authUser } } = await supabase.auth.getUser()
   if (!authUser) redirect('/login')
 
-  const [userRecord] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, authUser.id))
-    .limit(1)
-
+  const [userRecord] = await db.select().from(users).where(eq(users.id, authUser.id)).limit(1)
   if (!userRecord) redirect('/login')
 
   const [contract] = await db
@@ -49,14 +33,7 @@ export default async function ContractDetailPage({
     .from(contracts)
     .where(and(eq(contracts.id, contractId), eq(contracts.orgId, userRecord.orgId)))
     .limit(1)
-
   if (!contract) notFound()
-
-  const [vendor] = await db
-    .select()
-    .from(vendors)
-    .where(eq(vendors.id, contract.vendorId))
-    .limit(1)
 
   const documents = await db
     .select()
@@ -69,178 +46,130 @@ export default async function ContractDetailPage({
     .from(kpis)
     .where(eq(kpis.contractId, contractId))
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-slate-500 mb-6">
-        <Link href="/vendors" className="hover:text-slate-700 transition-colors">
-          Vendors
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link
-          href={`/vendors/${vendorId}`}
-          className="hover:text-slate-700 transition-colors"
-        >
-          {vendor?.name ?? 'Unknown Vendor'}
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <Link
-          href={`/vendors/${vendorId}/contracts`}
-          className="hover:text-slate-700 transition-colors"
-        >
-          Contracts
-        </Link>
-        <ChevronRight className="h-4 w-4" />
-        <span className="text-slate-900 font-medium">{contract.name}</span>
-      </nav>
+  const [{ value: termCount }] = await db
+    .select({ value: count() })
+    .from(contractKeyTerms)
+    .where(eq(contractKeyTerms.contractId, contractId))
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-8">
-        <div>
-          <h1 className="text-2xl font-semibold text-slate-900">{contract.name}</h1>
-          {contract.contractNumber && (
-            <p className="text-sm text-slate-500 mt-1">{contract.contractNumber}</p>
-          )}
-          <div className="mt-2">
-            <Badge>{contract.status ?? 'draft'}</Badge>
+  const statusMap: Record<string, 'met' | 'stale' | 'breach' | 'risk'> = {
+    active: 'met', expired: 'stale', terminated: 'breach', draft: 'risk',
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+
+      {/* Left column */}
+      <div className="space-y-5">
+
+        {/* Documents card */}
+        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="px-5 py-4 border-b border-border-soft">
+            <h3 className="text-sm font-semibold text-ink">Contract documents</h3>
+            <p className="text-[12.5px] text-muted mt-0.5">Upload PDFs or Word files — text is extracted automatically</p>
+          </div>
+          <div className="p-5 space-y-4">
+            <DocumentList documents={documents} />
+            <DocumentUploadPanel contractId={contractId} orgId={userRecord.orgId} />
           </div>
         </div>
-        {contract.extractionStatus === 'complete' && (
-          <Button asChild className="bg-green-600 hover:bg-green-700 text-white">
-            <Link href={`/vendors/${vendorId}/contracts/${contractId}/kpis`}>
-              View KPI Register
-            </Link>
-          </Button>
+
+        {/* AI extraction card */}
+        <div className="bg-surface border border-border rounded-lg overflow-hidden">
+          <div className="px-5 py-4 border-b border-border-soft">
+            <h3 className="text-sm font-semibold text-ink">AI extraction</h3>
+            <p className="text-[12.5px] text-muted mt-0.5">
+              {documents.length === 0
+                ? 'Upload at least one document to enable extraction'
+                : `${documents.length} document${documents.length !== 1 ? 's' : ''} ready · ${Number(kpiCount)} KPI${Number(kpiCount) !== 1 ? 's' : ''} extracted`}
+            </p>
+          </div>
+          <div className="p-5">
+            <ExtractionTrigger
+              contractId={contractId}
+              vendorId={vendorId}
+              extractionStatus={contract.extractionStatus}
+              kpiCount={Number(kpiCount)}
+              termCount={Number(termCount)}
+            />
+          </div>
+        </div>
+
+        {/* AI notes */}
+        {contract.extractionStatus === 'complete' && contract.aiExtractionNotes && (
+          <AiNotes notes={contract.aiExtractionNotes} />
         )}
       </div>
 
-      {/* Two-column grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left column (lg:col-span-2) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Card 1: Contract documents */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contract documents</CardTitle>
-              <CardDescription>Upload PDFs for AI extraction</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DocumentList documents={documents} />
-              <DocumentUploadPanel contractId={contractId} orgId={userRecord.orgId} />
-            </CardContent>
-          </Card>
+      {/* Right column */}
+      <div className="space-y-4">
 
-          {/* Card 2: AI Extraction */}
-          <Card>
-            <CardContent className="pt-6">
-              <ExtractionTrigger
-                contractId={contractId}
-                vendorId={vendorId}
-                extractionStatus={contract.extractionStatus}
-                kpiCount={Number(kpiCount)}
-              />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Right column (lg:col-span-1) */}
-        <div className="lg:col-span-1 space-y-6">
-          {/* Card 3: Contract details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contract details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-1 gap-y-4">
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Start date
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {contract.startDate ? formatDate(contract.startDate) : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    End date
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {contract.endDate ? formatDate(contract.endDate) : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Notice period
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {contract.noticePeriodDays != null
-                      ? `${contract.noticePeriodDays} days`
-                      : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Auto-renewal
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {contract.autoRenewal
-                      ? `Yes${contract.autoRenewalMonths != null ? ` - ${contract.autoRenewalMonths} months` : ''}`
-                      : 'No'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Annual value
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {formatCurrency(contract.annualValue ?? null, contract.currency ?? 'AUD')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Monthly value
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {formatCurrency(contract.monthlyValue ?? null, contract.currency ?? 'AUD')}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Perspective
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {contract.perspective === 'buyer'
-                      ? 'Buyer'
-                      : contract.perspective === 'vendor'
-                      ? 'Vendor'
-                      : '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                    Currency
-                  </dt>
-                  <dd className="mt-1 text-sm text-slate-900">
-                    {contract.currency ?? '—'}
-                  </dd>
-                </div>
-              </dl>
-
-              {contract.aiExtractionNotes && contract.extractionStatus === 'complete' && (
-                <div className="mt-6 pt-6 border-t border-slate-100">
-                  <h4 className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-2">
-                    AI Notes
-                  </h4>
-                  <p className="text-sm italic text-slate-600">
-                    {contract.aiExtractionNotes.length > 400
-                      ? `${contract.aiExtractionNotes.slice(0, 400)}...`
-                      : contract.aiExtractionNotes}
-                  </p>
-                </div>
+        {/* Contract name + status header */}
+        <div className="bg-surface border border-border rounded-lg p-5">
+          <div className="flex items-start justify-between gap-2 mb-4">
+            <div className="min-w-0">
+              <h3 className="text-[13.5px] font-semibold text-ink leading-snug">{contract.name}</h3>
+              {contract.contractNumber && (
+                <p className="text-[11px] font-mono text-muted mt-0.5">{contract.contractNumber}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+            <StatusBadge
+              status={statusMap[contract.status] ?? 'stale'}
+              label={contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
+            />
+          </div>
+
+          {/* Unified details panel */}
+          <ContractDetailsPanel
+            hasDocuments={documents.length > 0}
+            contract={{
+              id: contractId,
+              contractNumber: contract.contractNumber ?? null,
+              startDate: contract.startDate ?? null,
+              endDate: contract.endDate ?? null,
+              noticePeriodDays: contract.noticePeriodDays ?? null,
+              noticeDeadline: contract.noticeDeadline ?? null,
+              autoRenewal: contract.autoRenewal,
+              autoRenewalMonths: contract.autoRenewalMonths ?? null,
+              annualValue: contract.annualValue ?? null,
+              monthlyValue: contract.monthlyValue ?? null,
+              currency: contract.currency ?? 'AUD',
+              perspective: contract.perspective ?? 'buyer',
+              extractionStatus: contract.extractionStatus,
+            }}
+          />
         </div>
+
+        {/* KPI register link — shown after extraction */}
+        {contract.extractionStatus === 'complete' && (
+          <div className="space-y-2">
+            <Link
+              href={`/vendors/${vendorId}/contracts/${contractId}/kpis`}
+              className="flex items-center justify-between gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg hover:bg-primary/10 transition-colors"
+            >
+              <div>
+                <div className="text-[13px] font-semibold text-primary">KPI Register</div>
+                <div className="text-[11.5px] text-primary/70 mt-0.5">
+                  {Number(kpiCount)} KPI{Number(kpiCount) !== 1 ? 's' : ''} · review &amp; activate
+                </div>
+              </div>
+              <svg className="h-4 w-4 text-primary shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+            <Link
+              href={`/vendors/${vendorId}/contracts/${contractId}/submissions`}
+              className="flex items-center justify-between gap-3 p-4 bg-surface border border-border rounded-lg hover:bg-hover transition-colors"
+            >
+              <div>
+                <div className="text-[13px] font-semibold text-ink">Submissions</div>
+                <div className="text-[11.5px] text-muted mt-0.5">Enter KPI results by period</div>
+              </div>
+              <svg className="h-4 w-4 text-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -27,11 +27,15 @@ export async function POST(req: NextRequest) {
     const { orgName, abn, fullName, email, password } = parsed.data
     const supabase = await createAdminClient()
 
+    // Require email verification only when explicitly enabled (needs Supabase SMTP
+    // configured). Defaults to auto-confirm so signup keeps working out of the box.
+    const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION === 'true'
+
     // 1. Create the auth user
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // auto-confirm for now — change to false for production email flow
+      email_confirm: !requireEmailVerification,
       user_metadata: { full_name: fullName },
     })
 
@@ -58,6 +62,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 2. Create organisation using Supabase Admin API (bypasses RLS)
+    // Free tier expires 3 months after signup (PLAN_LIMITS.starter.expiryMonths)
+    const trialEndsAt = new Date()
+    trialEndsAt.setMonth(trialEndsAt.getMonth() + 3)
+
     const { data: org, error: orgError } = await supabase
       .from('organisations')
       .insert({
@@ -65,6 +73,7 @@ export async function POST(req: NextRequest) {
         abn: abn ?? null,
         plan: 'starter',
         org_type: 'buyer',
+        trial_ends_at: trialEndsAt.toISOString(),
       })
       .select()
       .single()
@@ -101,7 +110,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      requiresEmailConfirmation: false, // auto-confirmed above
+      requiresEmailConfirmation: requireEmailVerification,
     })
   } catch (error) {
     console.error('Signup route error:', error)

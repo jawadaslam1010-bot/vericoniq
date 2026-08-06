@@ -12,6 +12,7 @@ import { users } from '@contractly/db/schema'
 import { PageTitle } from '@/components/shared/page-title'
 import { VendorMark } from '@/components/shared/vendor-mark'
 import { HealthBar } from '@/components/shared/health-bar'
+import { getClaimableCredits } from '@/lib/credits'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 
@@ -109,6 +110,9 @@ async function DashboardData() {
     (sum, c) => sum + parseFloat(c.annualValue ?? '0'),
     0
   )
+
+  // Claimable service credits across the whole org (locked-period breaches)
+  const { total: creditsClaimable, count: creditsClaims } = await getClaimableCredits({ orgId })
 
   // ── Health breakdown ───────────────────────────────────────────────────────
   const scoredVendors = activeVendors.filter((v) => v.healthScore != null)
@@ -414,9 +418,13 @@ async function DashboardData() {
               <div className="text-[10.5px] font-bold tracking-eyebrow uppercase text-muted">
                 Service credits claimable
               </div>
-              <div className="font-serif text-[28px] tracking-tight mt-1">$0</div>
+              <div className="font-serif text-[28px] tracking-tight mt-1">
+                {creditsClaimable > 0 ? fmtValue(creditsClaimable) : '$0'}
+              </div>
               <div className="text-[11.5px] text-muted mt-0.5">
-                No open claims · add KPI results to track
+                {creditsClaimable > 0
+                  ? `Across ${creditsClaims} breached KPI${creditsClaims !== 1 ? 's' : ''} in locked periods`
+                  : 'No open claims · add KPI results to track'}
               </div>
             </div>
             <button className="shrink-0 h-8 px-3.5 rounded-lg text-[13px] font-medium text-ink-soft border border-border bg-surface hover:bg-hover transition-colors duration-180">
@@ -614,10 +622,15 @@ function DashboardSkeleton() {
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+// DashboardData is an async Server Component. React 18's JSX types don't model
+// async functions as element types (next build rejects it even though tsc is
+// happy), so cast for the type checker — Next streams it correctly at runtime.
+const DashboardStream = DashboardData as unknown as () => JSX.Element
+
 export default function DashboardPage() {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
-      <DashboardData />
+      <DashboardStream />
     </Suspense>
   )
 }

@@ -19,6 +19,7 @@ export type ExtractedKPI = {
   unit: string | null
   unit_label: string | null
   cadence: 'weekly' | 'monthly' | 'quarterly' | 'annual'
+  result_type: 'numeric' | 'binary'
   credit_formula: string | null
   credit_per_unit: number | null
   credit_percent_mrc: number | null
@@ -44,15 +45,62 @@ export type ExtractionConflict = {
   resolution: string
 }
 
+export type ExtractedContractDetails = {
+  contract_number: string | null
+  start_date: string | null          // ISO "YYYY-MM-DD"
+  end_date: string | null
+  notice_period_days: number | null
+  notice_deadline: string | null     // ISO "YYYY-MM-DD" — only if explicitly stated
+  auto_renewal: boolean | null
+  auto_renewal_months: number | null
+  annual_value: number | null
+  monthly_value: number | null
+  total_contract_value: number | null
+  currency: string | null
+}
+
 export type ExtractionResult = {
   kpis: ExtractedKPI[]
   key_terms: ExtractedKeyTerm[]
   conflicts: ExtractionConflict[]
   ai_notes: string
+  contract_details: ExtractedContractDetails | null
 }
 
-// Max documents per Claude call — keeps output well within token limits
-const BATCH_SIZE = 3
+// Maximum characters per batch sent to Claude.
+// ~150k chars ≈ 37k tokens of input — well within Claude's 200k context window.
+// Large documents are chunked (see chunkDocument) so they never exceed this in one call.
+const MAX_CHARS_PER_BATCH = 150_000
+
+// Overlap between chunks to avoid cutting a KPI definition mid-sentence
+const CHUNK_OVERLAP = 1_000
+
+/**
+ * Split a large document into overlapping chunks, each within MAX_CHARS_PER_BATCH.
+ * Small documents are returned as-is.
+ */
+function chunkDocument(doc: DocumentInput): DocumentInput[] {
+  if (doc.text.length <= MAX_CHARS_PER_BATCH) return [doc]
+
+  const chunks: DocumentInput[] = []
+  let offset = 0
+  let part = 1
+  const totalParts = Math.ceil(doc.text.length / (MAX_CHARS_PER_BATCH - CHUNK_OVERLAP))
+
+  while (offset < doc.text.length) {
+    const end = Math.min(offset + MAX_CHARS_PER_BATCH, doc.text.length)
+    chunks.push({
+      ...doc,
+      text: doc.text.slice(offset, end),
+      name: totalParts > 1 ? `${doc.name} (part ${part}/${totalParts})` : doc.name,
+    })
+    if (end === doc.text.length) break
+    offset += MAX_CHARS_PER_BATCH - CHUNK_OVERLAP
+    part++
+  }
+
+  return chunks
+}
 
 function buildExtractionContext(
   documents: DocumentInput[],
@@ -71,15 +119,38 @@ function buildExtractionContext(
     context += `---\n`
     context += `## ${doc.name}\n`
     context += `Type: ${doc.docType} | Hierarchy order: ${doc.hierarchyOrder}\n\n`
-    const CHAR_LIMIT = 12000
-    const truncated = doc.text.length > CHAR_LIMIT
-      ? doc.text.slice(0, CHAR_LIMIT) + '\n\n[DOCUMENT TRUNCATED]'
-      : doc.text
-    context += truncated
+    context += doc.text
     context += '\n\n'
   }
 
   return context
+}
+
+/**
+ * Expand documents into chunks, then group chunks into batches within MAX_CHARS_PER_BATCH.
+ * Multiple small documents may share a batch; each large-document chunk gets its own.
+ */
+function buildBatches(documents: DocumentInput[]): DocumentInput[][] {
+  // Chunk any document that exceeds the batch limit
+  const expanded = documents.flatMap(chunkDocument)
+
+  const batches: DocumentInput[][] = []
+  let current: DocumentInput[] = []
+  let currentChars = 0
+
+  for (const doc of expanded) {
+    const docChars = doc.text.length
+    if (current.length > 0 && currentChars + docChars > MAX_CHARS_PER_BATCH) {
+      batches.push(current)
+      current = []
+      currentChars = 0
+    }
+    current.push(doc)
+    currentChars += docChars
+  }
+
+  if (current.length > 0) batches.push(current)
+  return batches
 }
 
 async function runBatchExtraction(
@@ -94,7 +165,7 @@ async function runBatchExtraction(
 
   const stream = await anthropic.messages.stream({
     model: ANTHROPIC_MODEL,
-    max_tokens: 10000,
+    max_tokens: 32000,
     system: contractExtractionPrompt({ perspective }),
     messages: [{ role: 'user', content: context }],
   })
@@ -151,11 +222,15 @@ function mergeResults(results: ExtractionResult[]): ExtractionResult {
     .map((r, i) => `[Batch ${i + 1}] ${r.ai_notes}`)
     .join('\n\n')
 
+  // Use contract_details from whichever batch found them (first non-null wins)
+  const contract_details = results.find(r => r.contract_details != null)?.contract_details ?? null
+
   return {
     kpis: allKpis,
     key_terms: allKeyTerms,
     conflicts: allConflicts,
     ai_notes: aiNotes,
+    contract_details,
   }
 }
 
@@ -170,11 +245,8 @@ export async function extractContractData(
   // Sort by hierarchy: amendments first (lowest order = highest precedence)
   const sorted = [...documents].sort((a, b) => a.hierarchyOrder - b.hierarchyOrder)
 
-  // Split into batches
-  const batches: DocumentInput[][] = []
-  for (let i = 0; i < sorted.length; i += BATCH_SIZE) {
-    batches.push(sorted.slice(i, i + BATCH_SIZE))
-  }
+  // Split into batches based on total character count — no per-document truncation
+  const batches = buildBatches(sorted)
 
   console.log(`[extraction] Starting extraction — ${documents.length} documents in ${batches.length} batch(es)`)
 

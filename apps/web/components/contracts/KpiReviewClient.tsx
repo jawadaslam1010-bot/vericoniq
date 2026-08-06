@@ -26,6 +26,7 @@ type KPI = {
   unit: string | null
   unitLabel: string | null
   cadence: string
+  resultType: string | null
   creditFormula: string | null
   creditPerUnit: string | null
   creditPercentMrc: string | null
@@ -57,6 +58,7 @@ type EditKpiFormProps = {
 
 function EditKpiForm({ kpi, onCancel, onSaved }: EditKpiFormProps) {
   const [name, setName] = useState(kpi.name)
+  const [resultType, setResultType] = useState(kpi.resultType ?? 'numeric')
   const [targetValue, setTargetValue] = useState(kpi.targetValue ?? '')
   const [targetOperator, setTargetOperator] = useState(kpi.targetOperator)
   const [targetValueMax, setTargetValueMax] = useState(kpi.targetValueMax ?? '')
@@ -66,8 +68,11 @@ function EditKpiForm({ kpi, onCancel, onSaved }: EditKpiFormProps) {
   const [creditCapAmount, setCreditCapAmount] = useState(kpi.creditCapAmount ?? '')
   const [isActive, setIsActive] = useState(String(kpi.isActive))
 
+  const isBinary = resultType === 'binary'
+
   useEffect(() => {
     setName(kpi.name)
+    setResultType(kpi.resultType ?? 'numeric')
     setTargetValue(kpi.targetValue ?? '')
     setTargetOperator(kpi.targetOperator)
     setTargetValueMax(kpi.targetValueMax ?? '')
@@ -92,10 +97,11 @@ function EditKpiForm({ kpi, onCancel, onSaved }: EditKpiFormProps) {
     updateMutation.mutate({
       id: kpi.id,
       name,
-      targetValue: targetValue || null,
-      targetOperator,
-      targetValueMax: targetOperator === 'between' ? (targetValueMax || null) : null,
-      unitLabel: unitLabel || null,
+      resultType: resultType as 'numeric' | 'binary',
+      targetValue: isBinary ? null : (targetValue || null),
+      targetOperator: isBinary ? 'gte' : targetOperator,
+      targetValueMax: (!isBinary && targetOperator === 'between') ? (targetValueMax || null) : null,
+      unitLabel: isBinary ? null : (unitLabel || null),
       cadence: cadence as 'weekly' | 'monthly' | 'quarterly' | 'annual',
       creditFormula: creditFormula || null,
       creditCapAmount: creditCapAmount || null,
@@ -116,54 +122,76 @@ function EditKpiForm({ kpi, onCancel, onSaved }: EditKpiFormProps) {
           />
         </div>
 
-        <div>
-          <Label htmlFor={`operator-${kpi.id}`}>Target Operator</Label>
-          <Select value={targetOperator} onValueChange={setTargetOperator}>
-            <SelectTrigger id={`operator-${kpi.id}`} className="mt-1">
+        <div className="sm:col-span-2">
+          <Label htmlFor={`resultType-${kpi.id}`}>Result measurement</Label>
+          <Select value={resultType} onValueChange={setResultType}>
+            <SelectTrigger id={`resultType-${kpi.id}`} className="mt-1">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="gte">≥ (gte)</SelectItem>
-              <SelectItem value="lte">≤ (lte)</SelectItem>
-              <SelectItem value="eq">= (eq)</SelectItem>
-              <SelectItem value="between">between</SelectItem>
+              <SelectItem value="numeric">Numeric value (measured against a target)</SelectItem>
+              <SelectItem value="binary">Met / Not met (pass or fail outcome)</SelectItem>
             </SelectContent>
           </Select>
+          {isBinary && (
+            <p className="mt-1.5 text-xs text-slate-500">
+              Binary KPIs record a pass/fail outcome — no numeric target is required.
+            </p>
+          )}
         </div>
 
-        <div>
-          <Label htmlFor={`targetValue-${kpi.id}`}>Target Value</Label>
-          <Input
-            id={`targetValue-${kpi.id}`}
-            type="number"
-            value={targetValue}
-            onChange={(e) => setTargetValue(e.target.value)}
-            className="mt-1"
-          />
-        </div>
+        {!isBinary && (
+          <>
+            <div>
+              <Label htmlFor={`operator-${kpi.id}`}>Target Operator</Label>
+              <Select value={targetOperator} onValueChange={setTargetOperator}>
+                <SelectTrigger id={`operator-${kpi.id}`} className="mt-1">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gte">≥ (gte)</SelectItem>
+                  <SelectItem value="lte">≤ (lte)</SelectItem>
+                  <SelectItem value="eq">= (eq)</SelectItem>
+                  <SelectItem value="between">between</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        {targetOperator === 'between' && (
-          <div>
-            <Label htmlFor={`targetValueMax-${kpi.id}`}>Target Value Max</Label>
-            <Input
-              id={`targetValueMax-${kpi.id}`}
-              type="number"
-              value={targetValueMax}
-              onChange={(e) => setTargetValueMax(e.target.value)}
-              className="mt-1"
-            />
-          </div>
+            <div>
+              <Label htmlFor={`targetValue-${kpi.id}`}>Target Value</Label>
+              <Input
+                id={`targetValue-${kpi.id}`}
+                type="number"
+                value={targetValue}
+                onChange={(e) => setTargetValue(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+
+            {targetOperator === 'between' && (
+              <div>
+                <Label htmlFor={`targetValueMax-${kpi.id}`}>Target Value Max</Label>
+                <Input
+                  id={`targetValueMax-${kpi.id}`}
+                  type="number"
+                  value={targetValueMax}
+                  onChange={(e) => setTargetValueMax(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
+            )}
+
+            <div>
+              <Label htmlFor={`unitLabel-${kpi.id}`}>Unit Label</Label>
+              <Input
+                id={`unitLabel-${kpi.id}`}
+                value={unitLabel}
+                onChange={(e) => setUnitLabel(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+          </>
         )}
-
-        <div>
-          <Label htmlFor={`unitLabel-${kpi.id}`}>Unit Label</Label>
-          <Input
-            id={`unitLabel-${kpi.id}`}
-            value={unitLabel}
-            onChange={(e) => setUnitLabel(e.target.value)}
-            className="mt-1"
-          />
-        </div>
 
         <div>
           <Label htmlFor={`cadence-${kpi.id}`}>Cadence</Label>
@@ -239,6 +267,7 @@ function EditKpiForm({ kpi, onCancel, onSaved }: EditKpiFormProps) {
 // ---------------------------------------------------------------------------
 
 function formatTarget(kpi: KPI): string {
+  if (kpi.resultType === 'binary') return 'Met / Not met'
   const unit = kpi.unitLabel ?? kpi.unit ?? ''
   const suffix = unit ? ` ${unit}` : ''
   switch (kpi.targetOperator) {
@@ -374,7 +403,14 @@ export function KpiReviewClient({
                             </span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-slate-700">{formatTarget(kpi)}</td>
+                        <td className="px-4 py-3 text-slate-700">
+                          <div>{formatTarget(kpi)}</div>
+                          {kpi.resultType === 'binary' && (
+                            <span className="mt-0.5 inline-flex items-center rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">
+                              binary
+                            </span>
+                          )}
+                        </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
                             {kpi.cadence}

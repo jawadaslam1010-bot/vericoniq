@@ -3,8 +3,7 @@ import { TRPCError } from '@trpc/server'
 import { eq, and, isNull, desc } from '@contractly/db'
 import { router, viewerProcedure, managerProcedure } from '../trpc'
 import { vendors } from '@contractly/db/schema'
-import { VENDOR_LIMITS } from '@contractly/types'
-import type { OrgPlan } from '@contractly/types'
+import { assertCanCreate } from '@/lib/billing/limits'
 import { createVendorSchema, updateVendorSchema } from '@/lib/schemas/vendors'
 
 export { createVendorSchema, updateVendorSchema }
@@ -48,32 +47,8 @@ export const vendorsRouter = router({
 
   // Create a vendor — enforces plan vendor limits
   create: managerProcedure.input(createVendorSchema).mutation(async ({ ctx, input }) => {
-    // Fetch org plan to enforce limits
-    const { organisations } = await import('@contractly/db/schema')
-    const [org] = await ctx.db
-      .select({ plan: organisations.plan })
-      .from(organisations)
-      .where(eq(organisations.id, ctx.user.orgId))
-      .limit(1)
-
-    if (!org) {
-      throw new TRPCError({ code: 'INTERNAL_SERVER_ERROR', message: 'Organisation not found' })
-    }
-
-    const limit = VENDOR_LIMITS[org.plan as OrgPlan]
-    if (limit !== Infinity) {
-      const existingCount = await ctx.db
-        .select({ id: vendors.id })
-        .from(vendors)
-        .where(and(eq(vendors.orgId, ctx.user.orgId), isNull(vendors.deletedAt)))
-
-      if (existingCount.length >= limit) {
-        throw new TRPCError({
-          code: 'FORBIDDEN',
-          message: `Your ${org.plan} plan allows a maximum of ${limit} vendors. Upgrade to add more.`,
-        })
-      }
-    }
+    // Plan limits + free-tier expiry
+    await assertCanCreate(ctx.user.orgId, 'vendor')
 
     const [vendor] = await ctx.db
       .insert(vendors)

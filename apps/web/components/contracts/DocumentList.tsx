@@ -23,6 +23,7 @@ import {
   X,
   Check,
   AlertTriangle,
+  ExternalLink,
 } from 'lucide-react'
 
 type DocType = 'msa' | 'schedule' | 'annexure' | 'amendment' | 'other'
@@ -60,6 +61,7 @@ type Document = {
   hierarchyOrder: number
   pageCount: number | null
   storagePath: string
+  originalStoragePath?: string | null
   extractedText?: string | null
 }
 
@@ -75,6 +77,27 @@ export function DocumentList({ documents }: DocumentListProps) {
   )
   const [editingId, setEditingId] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [openingId, setOpeningId] = useState<string | null>(null)
+
+  const openDocument = async (doc: Document) => {
+    setOpeningId(doc.id)
+    try {
+      // Prefer original file (DOCX) so users see proper formatting — fall back to converted PDF
+      const pathToOpen = doc.originalStoragePath ?? doc.storagePath
+      const { data, error } = await supabase.storage
+        .from('contracts')
+        .createSignedUrl(pathToOpen, 60 * 60) // 1 hour expiry
+      if (error || !data?.signedUrl) {
+        toast.error('Could not open document. Please try again.')
+        return
+      }
+      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+    } catch {
+      toast.error('Could not open document. Please try again.')
+    } finally {
+      setOpeningId(null)
+    }
+  }
 
   // Edit state
   const [editName, setEditName] = useState('')
@@ -254,6 +277,14 @@ export function DocumentList({ documents }: DocumentListProps) {
                 </div>
                 {/* Action buttons — visible on hover */}
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                  <button
+                    onClick={() => openDocument(doc)}
+                    disabled={openingId === doc.id}
+                    className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors disabled:opacity-50"
+                    title="Open document"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </button>
                   <button
                     onClick={() => startEdit(doc)}
                     className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"

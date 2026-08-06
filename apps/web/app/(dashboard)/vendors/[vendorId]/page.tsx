@@ -131,24 +131,32 @@ export default async function VendorOverviewPage({
               </thead>
               <tbody>
                 {vendorContracts.slice(0, 5).map((c, i) => (
-                  <tr key={c.id} className={cn('hover:bg-hover transition-colors', i < Math.min(vendorContracts.length, 5) - 1 ? 'border-b border-border-soft' : '')}>
+                  <tr key={c.id} className={cn('hover:bg-hover transition-colors cursor-pointer', i < Math.min(vendorContracts.length, 5) - 1 ? 'border-b border-border-soft' : '')}>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-ink">{c.name}</div>
-                      {c.contractNumber && (
-                        <div className="text-[11px] text-muted font-mono mt-0.5">{c.contractNumber}</div>
-                      )}
+                      <Link href={`/vendors/${vendorId}/contracts/${c.id}`} className="block">
+                        <div className="font-medium text-ink">{c.name}</div>
+                        {c.contractNumber && (
+                          <div className="text-[11px] text-muted font-mono mt-0.5">{c.contractNumber}</div>
+                        )}
+                      </Link>
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge
-                        status={c.status === 'active' ? 'met' : c.status === 'expired' ? 'stale' : 'breach'}
-                        label={c.status.charAt(0).toUpperCase() + c.status.slice(1)}
-                      />
+                      <Link href={`/vendors/${vendorId}/contracts/${c.id}`} className="block">
+                        <StatusBadge
+                          status={c.status === 'active' ? 'met' : c.status === 'expired' ? 'stale' : 'breach'}
+                          label={c.status.charAt(0).toUpperCase() + c.status.slice(1)}
+                        />
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-right text-ink-soft tabular-nums">
-                      {fmtValue(parseFloat(c.annualValue ?? '0'))}
+                      <Link href={`/vendors/${vendorId}/contracts/${c.id}`} className="block">
+                        {fmtValue(parseFloat(c.annualValue ?? '0'))}
+                      </Link>
                     </td>
                     <td className="px-4 py-3 text-right text-muted">
-                      {fmtDate(c.endDate)}
+                      <Link href={`/vendors/${vendorId}/contracts/${c.id}`} className="block">
+                        {fmtDate(c.endDate)}
+                      </Link>
                     </td>
                   </tr>
                 ))}

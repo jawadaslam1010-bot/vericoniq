@@ -115,10 +115,20 @@ export function DocumentUploadPanel({ contractId, orgId, onUploadComplete }: Doc
     try {
       let fileToUpload: File | Blob = file
       let storageFileName = file.name
+      let originalStoragePath: string | undefined
 
-      // Step 1 (DOCX only): convert to PDF
+      // Step 1 (DOCX only): store original + convert to PDF
       if (isWordFile(file)) {
         setFileStatus(idx, 'converting')
+
+        // Upload the original DOCX so users can view/download the properly-formatted file
+        const origPath = `${orgId}/${contractId}/originals/${file.name}`
+        const { error: origError } = await supabase.storage
+          .from('contracts')
+          .upload(origPath, file, { upsert: true, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' })
+        if (!origError) originalStoragePath = origPath
+
+        // Convert to PDF for text extraction
         const formData = new FormData()
         formData.append('file', file)
         const convertRes = await fetch('/api/convert-to-pdf', { method: 'POST', body: formData })
@@ -130,7 +140,7 @@ export function DocumentUploadPanel({ contractId, orgId, onUploadComplete }: Doc
         storageFileName = file.name.replace(/\.docx?$/i, '.pdf')
       }
 
-      // Step 2: upload to storage
+      // Step 2: upload to storage (PDF for extraction)
       setFileStatus(idx, 'uploading')
       const storagePath = `${orgId}/${contractId}/${storageFileName}`
       const { error: uploadError } = await supabase.storage
@@ -145,6 +155,7 @@ export function DocumentUploadPanel({ contractId, orgId, onUploadComplete }: Doc
         docType,
         hierarchyOrder,
         storagePath,
+        originalStoragePath,
         fileSizeBytes: fileToUpload.size,
       })
 
@@ -165,6 +176,23 @@ export function DocumentUploadPanel({ contractId, orgId, onUploadComplete }: Doc
         text: extractData.text ?? '',
         pageCount: extractData.pageCount,
       })
+
+      // Warn if the extracted text looks nothing like a contract document
+      const text = (extractData.text ?? '') as string
+      const CONTRACT_KEYWORDS = [
+        'agreement', 'contract', 'clause', 'obligation', 'party', 'parties',
+        'vendor', 'supplier', 'services', 'terms', 'conditions', 'termination',
+        'liability', 'indemnif', 'warranty', 'schedule', 'annexure', 'amendment',
+        'whereas', 'herein', 'notwithstanding', 'payment', 'fee',
+      ]
+      const lowerText = text.slice(0, 20000).toLowerCase()
+      const matchCount = CONTRACT_KEYWORDS.filter(kw => lowerText.includes(kw)).length
+      if (matchCount < 3) {
+        toast.warning(
+          `"${item.name || file.name}" doesn't appear to be a contract document. Please check you've uploaded the right file.`,
+          { duration: 8000 }
+        )
+      }
 
       setFileStatus(idx, 'done')
       return true

@@ -229,10 +229,14 @@ function VendorListSkeleton() {
   )
 }
 
+// VendorList is an async Server Component; cast for the type checker (see note
+// on the dashboard page). Next streams it correctly at runtime.
+const VendorListStream = VendorList as unknown as () => JSX.Element
+
 export default function VendorsPage() {
   return (
     <Suspense fallback={<VendorListSkeleton />}>
-      <VendorList />
+      <VendorListStream />
     </Suspense>
   )
 }

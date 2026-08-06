@@ -120,6 +120,7 @@ export async function POST(
       unit: kpi.unit ?? null,
       unitLabel: kpi.unit_label ?? null,
       cadence: kpi.cadence ?? 'monthly',
+      resultType: kpi.result_type ?? 'numeric',
       creditFormula: kpi.credit_formula ?? null,
       creditPerUnit: kpi.credit_per_unit != null ? String(kpi.credit_per_unit) : null,
       creditPercentMrc: kpi.credit_percent_mrc != null ? String(kpi.credit_percent_mrc) : null,
@@ -155,12 +156,28 @@ export async function POST(
       await db.insert(contractKeyTerms).values(termInserts)
     }
 
-    // Mark contract as complete
+    // Build contract detail updates from AI extraction
+    const det = result.contract_details
+    const detailUpdates = det ? {
+      ...(det.contract_number                              && { contractNumber: det.contract_number }),
+      ...(det.start_date                                   && { startDate: det.start_date }),
+      ...(det.end_date                                     && { endDate: det.end_date }),
+      ...(det.notice_period_days != null                   && { noticePeriodDays: det.notice_period_days }),
+      ...(det.notice_deadline                              && { noticeDeadline: det.notice_deadline }),
+      ...(det.auto_renewal != null                         && { autoRenewal: det.auto_renewal }),
+      ...(det.auto_renewal_months != null                  && { autoRenewalMonths: det.auto_renewal_months }),
+      ...(det.annual_value != null                         && { annualValue: String(det.annual_value) }),
+      ...(det.monthly_value != null                        && { monthlyValue: String(det.monthly_value) }),
+      ...(det.currency                                     && { currency: det.currency }),
+    } : {}
+
+    // Mark contract as complete, save AI notes and any extracted details
     await db
       .update(contracts)
       .set({
         extractionStatus: 'complete',
         aiExtractionNotes: result.ai_notes ?? null,
+        ...detailUpdates,
         updatedAt: new Date(),
       })
       .where(eq(contracts.id, contractId))

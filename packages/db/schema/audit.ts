@@ -33,3 +33,30 @@ export const auditLogs = pgTable(
 )
 
 export type AuditLog = typeof auditLogs.$inferSelect
+
+// ── Platform-level audit log ──────────────────────────────────────────────────
+// Separate from per-tenant audit_logs. Never exposed to tenant users.
+// Records every action taken by platform admins (Jawad / dev team).
+export const platformAuditLog = pgTable(
+  'platform_audit_log',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    // Email of the platform admin who took the action
+    adminEmail: text('admin_email').notNull(),
+    // e.g. 'org.viewed' | 'org.impersonated' | 'user.impersonated' | 'script.run'
+    action: text('action').notNull(),
+    targetOrgId: uuid('target_org_id'),
+    targetUserId: uuid('target_user_id'),
+    // Extra context — e.g. { page: '/admin/orgs/123', duration_ms: 412 }
+    metadata: jsonb('metadata'),
+    ipAddress: text('ip_address'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    adminEmailIdx: index('platform_audit_log_admin_email_idx').on(table.adminEmail),
+    targetOrgIdx: index('platform_audit_log_target_org_idx').on(table.targetOrgId),
+    createdAtIdx: index('platform_audit_log_created_at_idx').on(table.createdAt),
+  })
+)
+
+export type PlatformAuditLog = typeof platformAuditLog.$inferSelect

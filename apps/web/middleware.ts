@@ -4,16 +4,41 @@ import { NextResponse, type NextRequest } from 'next/server'
 // Public routes — no authentication required
 const PUBLIC_PATHS = [
   '/',             // landing page
+  '/about',        // public about page (also beta-gate exempt)
   '/login',
   '/signup',
   '/auth/callback',
   '/auth/confirm',
-  '/submit',       // vendor submission via magic link
+  '/portal',       // vendor submission via magic link
+  '/api/portal/',  // vendor portal API (token-authenticated)
+  '/invite',       // team invitation acceptance
+  '/api/invite/',  // invitation acceptance API
   '/api/auth/',    // auth API routes (signup, signout)
   '/api/waitlist', // waitlist form submission
+  '/api/stripe/',  // Stripe webhooks (signature-verified)
 ]
 
+// Beta gate — when BETA_GATE_PASSWORD is set, the whole site sits behind a
+// shared password. Token-protected flows (cron, vendor portal, invitations) are
+// exempt so they still work for external testers. Unset the env var to remove
+// the gate entirely.
+const BETA_EXEMPT_PREFIXES = ['/beta', '/about', '/api/beta', '/api/cron', '/api/stripe', '/portal', '/api/portal', '/invite', '/api/invite']
+
 export async function middleware(request: NextRequest) {
+  const { pathname: earlyPath } = request.nextUrl
+
+  const betaPassword = process.env.BETA_GATE_PASSWORD
+  if (betaPassword) {
+    const hasBetaAccess = request.cookies.get('viq_beta')?.value === betaPassword
+    const isExempt = BETA_EXEMPT_PREFIXES.some(p => earlyPath === p || earlyPath.startsWith(p + '/') || earlyPath.startsWith(p))
+    if (!hasBetaAccess && !isExempt) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/beta'
+      url.searchParams.set('next', earlyPath)
+      return NextResponse.redirect(url)
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(
@@ -58,8 +83,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(dashboardUrl)
   }
 
-  // Root — show landing page publicly; logged-in users go straight to dashboard
+  // Root — in development, skip the landing page and go straight to the app.
+  // In production, logged-in users go to /dashboard; everyone else sees the landing page.
   if (pathname === '/') {
+    if (process.env.NODE_ENV === 'development') {
+      const target = request.nextUrl.clone()
+      target.pathname = user ? '/dashboard' : '/login'
+      return NextResponse.redirect(target)
+    }
     if (user) {
       const target = request.nextUrl.clone()
       target.pathname = '/dashboard'

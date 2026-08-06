@@ -59,16 +59,61 @@ export function getFeatureFlags(plan: OrgPlan): FeatureFlags {
   }
 }
 
+// ─── Plan limits ─────────────────────────────────────────────────────────────
+// Single source of truth for what each plan allows. Keeps storage and AI costs
+// bounded: the free tier is small AND time-limited; Pro has generous-but-capped
+// usage; Enterprise is unlimited (sales-managed).
+
+export type PlanLimits = {
+  vendors: number
+  contracts: number
+  seats: number
+  /** Max size of a single uploaded document, in MB */
+  maxFileMb: number
+  /** Total document storage across the org, in MB */
+  storageMb: number
+  /** Free tier only: months after org creation before the tier expires */
+  expiryMonths: number | null
+}
+
+export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
+  starter: {
+    vendors: 2,
+    contracts: 3,
+    seats: 2,
+    maxFileMb: 10,
+    storageMb: 100,
+    expiryMonths: 3,
+  },
+  professional: {
+    vendors: 25,
+    contracts: 100,
+    seats: 10,
+    maxFileMb: 25,
+    storageMb: 5_000,
+    expiryMonths: null,
+  },
+  enterprise: {
+    vendors: Infinity,
+    contracts: Infinity,
+    seats: Infinity,
+    maxFileMb: 50,
+    storageMb: Infinity,
+    expiryMonths: null,
+  },
+}
+
+// Back-compat aliases (existing imports)
 export const VENDOR_LIMITS: Record<OrgPlan, number> = {
-  starter: 3,
-  professional: 10,
-  enterprise: Infinity,
+  starter: PLAN_LIMITS.starter.vendors,
+  professional: PLAN_LIMITS.professional.vendors,
+  enterprise: PLAN_LIMITS.enterprise.vendors,
 }
 
 export const SEAT_LIMITS: Record<OrgPlan, number> = {
-  starter: 2,
-  professional: 5,
-  enterprise: Infinity,
+  starter: PLAN_LIMITS.starter.seats,
+  professional: PLAN_LIMITS.professional.seats,
+  enterprise: PLAN_LIMITS.enterprise.seats,
 }
 
 // ─── API error shape ─────────────────────────────────────────────────────────

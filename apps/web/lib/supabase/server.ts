@@ -29,6 +29,17 @@ export async function createClient() {
   )
 }
 
+// Minimal admin client — no cookie handling, for use in portal/webhook routes
+// SERVER SIDE ONLY — never expose to the browser
+import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+export function createServiceClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
+
 // Admin client using service role — bypasses RLS
 // SERVER SIDE ONLY — never expose to the browser
 // Use only for: signup org creation, system operations

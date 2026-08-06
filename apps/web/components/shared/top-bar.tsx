@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation'
 import { useState } from 'react'
+import Link from 'next/link'
 import { Search, Bell, ChevronRight, LogOut, Settings } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
@@ -15,22 +16,36 @@ import {
 import { CommandPalette } from './command-palette'
 import type { SessionUser } from '@contractly/types'
 
-// Derive breadcrumbs from pathname
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Derive breadcrumbs from pathname — UUIDs are kept for href building but hidden from labels
 function useBreadcrumbs() {
   const pathname = usePathname()
   const segments = pathname.split('/').filter(Boolean)
 
   const LABELS: Record<string, string> = {
-    dashboard: 'Dashboard',
-    vendors: 'Vendors',
-    contracts: 'Contracts',
-    kpis: 'KPIs & SLA',
-    reports: 'Reports',
-    inbox: 'Inbox',
-    settings: 'Settings',
+    dashboard:   'Dashboard',
+    vendors:     'Vendors',
+    contracts:   'Contracts',
+    kpis:        'KPIs',
+    scorecard:   'Scorecard',
+    submissions: 'Submissions',
+    breaches:    'Breaches',
+    documents:   'Documents',
+    activity:    'Activity',
+    new:         'New',
+    settings:    'Settings',
   }
 
-  return segments.map((seg) => LABELS[seg] ?? seg)
+  // Build hrefs incrementally, skipping UUID segments in labels but keeping them in paths
+  const crumbs: { label: string; href: string }[] = []
+  let path = ''
+  for (const seg of segments) {
+    path += `/${seg}`
+    if (UUID_RE.test(seg)) continue   // UUID: include in path but skip as its own crumb
+    crumbs.push({ label: LABELS[seg] ?? seg, href: path })
+  }
+  return crumbs
 }
 
 export function TopBar({ user }: { user: SessionUser }) {
@@ -56,15 +71,18 @@ export function TopBar({ user }: { user: SessionUser }) {
         {/* Breadcrumbs */}
         <div className="flex items-center gap-1.5 text-[13.5px] min-w-0">
           {breadcrumbs.map((crumb, i) => (
-            <span key={i} className="flex items-center gap-1.5">
+            <span key={i} className="flex items-center gap-1.5 min-w-0">
               {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-faint shrink-0" />}
-              <span className={cn(
-                i === breadcrumbs.length - 1
-                  ? 'font-semibold text-ink truncate'
-                  : 'text-muted'
-              )}>
-                {crumb}
-              </span>
+              {i === breadcrumbs.length - 1 ? (
+                <span className="font-semibold text-ink truncate">{crumb.label}</span>
+              ) : (
+                <Link
+                  href={crumb.href}
+                  className="text-muted hover:text-ink transition-colors duration-150 shrink-0"
+                >
+                  {crumb.label}
+                </Link>
+              )}
             </span>
           ))}
         </div>
