@@ -130,6 +130,7 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-7 text-sm" style={{ color: SOFT }}>
             <a href="#how" className="hover:opacity-70 transition-opacity">How it works</a>
             <a href="#features" className="hover:opacity-70 transition-opacity">Features</a>
+            <a href="#security" className="hover:opacity-70 transition-opacity">Security</a>
             <a href="#pricing" className="hover:opacity-70 transition-opacity">Pricing</a>
             <Link href="/about" className="hover:opacity-70 transition-opacity">About</Link>
           </div>
@@ -268,14 +269,14 @@ export default function LandingPage() {
           </h2>
           <p className="mt-3 text-sm" style={{ color: MUTED }}>All prices in AUD. Cancel anytime.</p>
         </div>
-        <div className="grid md:grid-cols-3 gap-6 items-stretch">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 items-stretch">
           {/* Free */}
-          <div className="rounded-2xl p-7 flex flex-col" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
+          <div className="rounded-2xl p-6 flex flex-col" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
             <h3 className="font-semibold">Free</h3>
-            <div className="mt-3"><span style={{ fontFamily: SERIF, fontSize: '2.4rem' }}>$0</span></div>
+            <div className="mt-3"><span style={{ fontFamily: SERIF, fontSize: '2.2rem' }}>$0</span></div>
             <p className="mt-1 text-xs" style={{ color: MUTED }}>3-month evaluation</p>
             <ul className="mt-5 space-y-2.5 text-sm flex-1" style={{ color: SOFT }}>
-              {['2 vendors, 3 contracts', 'Full AI extraction', 'SLA tracking & scorecards', '100 MB document storage'].map(x => (
+              {['2 vendors, 3 contracts', 'Full AI extraction', 'Every feature, small scale', '100 MB storage'].map(x => (
                 <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
               ))}
             </ul>
@@ -283,19 +284,36 @@ export default function LandingPage() {
               Request access
             </a>
           </div>
-          {/* Pro */}
-          <div className="rounded-2xl p-7 flex flex-col relative" style={{ background: 'white', border: `2px solid ${TEAL}`, boxShadow: '0 12px 40px rgba(13,148,136,0.12)' }}>
-            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold text-white" style={{ background: TEAL }}>
+          {/* Essentials */}
+          <div className="rounded-2xl p-6 flex flex-col" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
+            <h3 className="font-semibold">Essentials</h3>
+            <div className="mt-3 flex items-baseline gap-1.5">
+              <span style={{ fontFamily: SERIF, fontSize: '2.2rem' }}>$99</span>
+              <span className="text-sm" style={{ color: MUTED }}>/month</span>
+            </div>
+            <p className="mt-1 text-xs" style={{ color: MUTED }}>or $990/year — two months free</p>
+            <ul className="mt-5 space-y-2.5 text-sm flex-1" style={{ color: SOFT }}>
+              {['5 vendors, 15 contracts', 'AI extraction & SLA tracking', 'Scorecards & renewal alerts', '0.5 GB storage'].map(x => (
+                <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
+              ))}
+            </ul>
+            <a href="#request" className="mt-6 inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors" style={{ border: `1px solid ${BORDER}`, color: SOFT }}>
+              Request access
+            </a>
+          </div>
+          {/* Professional */}
+          <div className="rounded-2xl p-6 flex flex-col relative" style={{ background: 'white', border: `2px solid ${TEAL}`, boxShadow: '0 12px 40px rgba(13,148,136,0.12)' }}>
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full px-3 py-1 text-[11px] font-bold text-white whitespace-nowrap" style={{ background: TEAL }}>
               MOST POPULAR
             </span>
             <h3 className="font-semibold">Professional</h3>
             <div className="mt-3 flex items-baseline gap-1.5">
-              <span style={{ fontFamily: SERIF, fontSize: '2.4rem' }}>$299</span>
+              <span style={{ fontFamily: SERIF, fontSize: '2.2rem' }}>$299</span>
               <span className="text-sm" style={{ color: MUTED }}>/month</span>
             </div>
             <p className="mt-1 text-xs" style={{ color: MUTED }}>or $2,990/year — two months free</p>
             <ul className="mt-5 space-y-2.5 text-sm flex-1" style={{ color: SOFT }}>
-              {['25 vendors, 100 contracts', 'Vendor submission portal', 'Service credit recovery', 'Renewal & breach alerts', 'Team access & roles', '5 GB document storage'].map(x => (
+              {['25 vendors, 100 contracts', 'Everything in Essentials', 'Vendor submission portal', 'Service credit recovery', 'Team access & roles', '2 GB storage'].map(x => (
                 <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
               ))}
             </ul>
@@ -304,12 +322,12 @@ export default function LandingPage() {
             </a>
           </div>
           {/* Enterprise */}
-          <div className="rounded-2xl p-7 flex flex-col" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
+          <div className="rounded-2xl p-6 flex flex-col" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
             <h3 className="font-semibold">Enterprise</h3>
-            <div className="mt-3"><span style={{ fontFamily: SERIF, fontSize: '2.4rem' }}>Custom</span></div>
+            <div className="mt-3"><span style={{ fontFamily: SERIF, fontSize: '2.2rem' }}>Custom</span></div>
             <p className="mt-1 text-xs" style={{ color: MUTED }}>For large portfolios</p>
             <ul className="mt-5 space-y-2.5 text-sm flex-1" style={{ color: SOFT }}>
-              {['Unlimited vendors & contracts', 'Unlimited storage', 'Custom onboarding', 'Priority support'].map(x => (
+              {['Unlimited vendors & contracts', 'Unlimited storage', 'Private cloud or on-premises deployment', 'Custom onboarding & priority support'].map(x => (
                 <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
               ))}
             </ul>
@@ -317,6 +335,39 @@ export default function LandingPage() {
               Talk to us
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* Security */}
+      <section id="security" className="py-20" style={{ backgroundColor: '#f5f5f0', borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}` }}>
+        <div className="max-w-6xl mx-auto px-6">
+          <div className="text-center mb-12">
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: TEAL }}>Security</span>
+            <h2 className="mt-3 text-3xl font-normal" style={{ fontFamily: SERIF }}>
+              Your contracts are commercially sensitive. We treat them that way.
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {[
+              { title: 'Encrypted everywhere', text: 'Documents and data are encrypted in transit (TLS 1.2+) and at rest (AES-256).' },
+              { title: 'Tenant isolation', text: 'Row-level security isolates every organisation’s data at the database layer — not just in application code.' },
+              { title: 'Australian data residency', text: 'Your data lives in Australian data centres (Sydney region) with daily encrypted backups.' },
+              { title: 'Role-based access', text: 'Admin, manager and viewer roles, with scoped, time-limited, revocable vendor portal links.' },
+              { title: 'Immutable audit trail', text: 'Every result, approval, exemption and change is recorded. Locked periods cannot be silently edited.' },
+              { title: 'Your data stays yours', text: 'AI reads your contracts to serve you — your documents are never used to train models, and you can export or delete at any time.' },
+            ].map(s => (
+              <div key={s.title} className="rounded-xl p-5" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
+                <div className="w-9 h-9 rounded-lg flex items-center justify-center mb-3" style={{ backgroundColor: '#f0fdfa' }}>
+                  <Shield className="h-4 w-4" style={{ color: TEAL }} />
+                </div>
+                <h3 className="font-semibold text-sm mb-1.5">{s.title}</h3>
+                <p className="text-xs leading-relaxed" style={{ color: MUTED }}>{s.text}</p>
+              </div>
+            ))}
+          </div>
+          <p className="mt-8 text-center text-xs" style={{ color: '#a8a29e' }}>
+            Questions about security or compliance? <a href="mailto:jawad@mypropiq.com.au?subject=VericonIQ%20Security" className="underline underline-offset-2" style={{ color: TEAL }}>Talk to us</a> — Enterprise plans include private cloud or on-premises deployment.
+          </p>
         </div>
       </section>
 
@@ -331,7 +382,7 @@ export default function LandingPage() {
             <p className="mt-3 text-sm leading-relaxed" style={{ color: '#b8c4c1' }}>
               We&apos;re onboarding a small group of teams. Tell us about your contract portfolio and
               we&apos;ll send you a beta invitation — early testers get{' '}
-              <strong style={{ color: 'white' }}>3 months free</strong>.
+              <strong style={{ color: 'white' }}>priority onboarding and a direct line to the founder</strong>.
             </p>
           </div>
 

@@ -23,4 +23,15 @@ export function billingEnabled(): boolean {
 export const STRIPE_PRICES = {
   proMonthly: () => process.env.STRIPE_PRICE_PRO_MONTHLY ?? '',
   proAnnual: () => process.env.STRIPE_PRICE_PRO_ANNUAL ?? '',
+  essentialsMonthly: () => process.env.STRIPE_PRICE_ESSENTIALS_MONTHLY ?? '',
+  essentialsAnnual: () => process.env.STRIPE_PRICE_ESSENTIALS_ANNUAL ?? '',
+}
+
+export type PaidTier = 'essentials' | 'professional'
+
+export function priceIdFor(tier: PaidTier, interval: 'monthly' | 'annual'): string {
+  if (tier === 'essentials') {
+    return interval === 'monthly' ? STRIPE_PRICES.essentialsMonthly() : STRIPE_PRICES.essentialsAnnual()
+  }
+  return interval === 'monthly' ? STRIPE_PRICES.proMonthly() : STRIPE_PRICES.proAnnual()
 }

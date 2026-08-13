@@ -10,7 +10,7 @@ import { Upload, Zap } from 'lucide-react'
 import { VendorMark } from '@/components/shared/vendor-mark'
 import { StatusBadge } from '@/components/ui/status-badge'
 import { VendorTabBar } from '@/components/shared/vendor-tab-bar'
-import { getClaimableCredits } from '@/lib/credits'
+import { getClaimableCredits, orgHasCreditRecovery } from '@/lib/credits'
 import { cn } from '@/lib/utils'
 
 const SERVICE_TYPE_LABELS: Record<string, string> = {
@@ -122,11 +122,12 @@ export default async function VendorDetailLayout({
   // KPI count for this vendor's contracts
   const kpiCount = vendorKpis.filter(k => contractIds.has(k.contractId)).length
 
-  // Claimable service credits across this vendor's contracts (locked-period breaches)
-  const { total: creditsClaimable, count: creditsClaims } = await getClaimableCredits({
-    orgId: userRecord.orgId,
-    contractIds: [...contractIds],
-  })
+  // Claimable service credits across this vendor's contracts (locked-period breaches).
+  // Credit recovery is a Professional feature — show an upgrade nudge otherwise.
+  const creditFeature = await orgHasCreditRecovery(userRecord.orgId)
+  const { total: creditsClaimable, count: creditsClaims } = creditFeature
+    ? await getClaimableCredits({ orgId: userRecord.orgId, contractIds: [...contractIds] })
+    : { total: 0, count: 0 }
 
   const pendingExtraction = vendorContracts.filter(c =>
     c.extractionStatus === 'processing' || c.extractionStatus === 'pending'
@@ -159,11 +160,13 @@ export default async function VendorDetailLayout({
     },
     {
       label: 'Credits claimable',
-      value: creditsClaimable > 0 ? fmtValue(creditsClaimable) : '$0',
-      sub: creditsClaimable > 0
+      value: !creditFeature ? '—' : creditsClaimable > 0 ? fmtValue(creditsClaimable) : '$0',
+      sub: !creditFeature
+        ? 'Available on Professional'
+        : creditsClaimable > 0
         ? `Across ${creditsClaims} breached KPI${creditsClaims !== 1 ? 's' : ''}`
         : 'No open claims',
-      tone: creditsClaimable > 0 ? ('breach' as const) : ('stale' as const),
+      tone: creditFeature && creditsClaimable > 0 ? ('breach' as const) : ('stale' as const),
     },
   ]
 

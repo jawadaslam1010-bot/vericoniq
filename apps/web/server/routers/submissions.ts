@@ -6,6 +6,8 @@ import { TRPCError } from '@trpc/server'
 import { randomBytes } from 'crypto'
 import { sendPortalLink, sendLockNotification } from '@/lib/email'
 import { scoreKpiResult, computeKpiCredit, contractMrc } from '@/lib/kpi-scoring'
+import { planHasFeature } from '@contractly/types'
+import { getOrgBilling } from '@/lib/billing/limits'
 
 export const submissionsRouter = router({
 
@@ -311,6 +313,15 @@ export const submissionsRouter = router({
       sendEmail: z.boolean().optional().default(false),
     }))
     .mutation(async ({ ctx, input }) => {
+      // The vendor portal is a Professional feature.
+      const org = await getOrgBilling(ctx.user.orgId)
+      if (!planHasFeature(org.plan, 'vendorPortal')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'The vendor submission portal is available on the Professional plan. Upgrade in Settings to send portal links.',
+        })
+      }
+
       const [period] = await ctx.db
         .select()
         .from(submissionPeriods)

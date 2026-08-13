@@ -3,7 +3,7 @@ import { organisations } from '@contractly/db/schema'
 import { eq } from '@contractly/db'
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
-import { getStripe, billingEnabled, STRIPE_PRICES } from '@/lib/billing/stripe'
+import { getStripe, billingEnabled, priceIdFor } from '@/lib/billing/stripe'
 import { getOrgBilling, getOrgUsage, planLimits, isFreeTierExpired } from '@/lib/billing/limits'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
@@ -35,14 +35,17 @@ export const billingRouter = router({
 
   // ── Start a Pro subscription via Stripe Checkout ───────────────────────────
   createCheckoutSession: adminProcedure
-    .input(z.object({ interval: z.enum(['monthly', 'annual']) }))
+    .input(z.object({
+      tier: z.enum(['essentials', 'professional']).default('professional'),
+      interval: z.enum(['monthly', 'annual']),
+    }))
     .mutation(async ({ ctx, input }) => {
       if (!billingEnabled()) {
         throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Billing is not configured yet' })
       }
-      const priceId = input.interval === 'monthly' ? STRIPE_PRICES.proMonthly() : STRIPE_PRICES.proAnnual()
+      const priceId = priceIdFor(input.tier, input.interval)
       if (!priceId) {
-        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Price is not configured for this interval' })
+        throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Price is not configured for this tier/interval' })
       }
 
       const stripe = getStripe()
@@ -74,8 +77,8 @@ export const billingRouter = router({
         customer: customerId,
         line_items: [{ price: priceId, quantity: 1 }],
         allow_promotion_codes: true,
-        subscription_data: { metadata: { org_id: org.id } },
-        metadata: { org_id: org.id },
+        subscription_data: { metadata: { org_id: org.id, tier: input.tier } },
+        metadata: { org_id: org.id, tier: input.tier },
         success_url: `${APP_URL}/settings?billing=success`,
         cancel_url: `${APP_URL}/settings?billing=cancelled`,
       })

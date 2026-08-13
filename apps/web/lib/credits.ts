@@ -7,11 +7,22 @@
  * for results entered before the calculator existed, and if credit terms change.
  */
 import { db } from '@contractly/db'
-import { kpiResults, kpis, contracts, submissionPeriods } from '@contractly/db/schema'
+import { kpiResults, kpis, contracts, submissionPeriods, organisations } from '@contractly/db/schema'
 import { eq, and, inArray } from '@contractly/db'
+import { planHasFeature } from '@contractly/types'
 import { computeKpiCredit, contractMrc } from './kpi-scoring'
 
 export type ClaimableCredits = { total: number; count: number }
+
+/** Credit recovery is a Professional-plan feature (free trial included). */
+export async function orgHasCreditRecovery(orgId: string): Promise<boolean> {
+  const [org] = await db
+    .select({ plan: organisations.plan })
+    .from(organisations)
+    .where(eq(organisations.id, orgId))
+    .limit(1)
+  return org ? planHasFeature(org.plan, 'creditRecovery') : false
+}
 
 /**
  * Total claimable credits for an org, optionally scoped to a set of contracts.

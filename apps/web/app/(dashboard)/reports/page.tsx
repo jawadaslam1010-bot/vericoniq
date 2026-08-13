@@ -8,7 +8,7 @@ import { db } from '@contractly/db'
 import { eq, and, isNull, inArray } from '@contractly/db'
 import { users, vendors, contracts, kpiResults, submissionPeriods } from '@contractly/db/schema'
 import { PageTitle } from '@/components/shared/page-title'
-import { getClaimableCredits } from '@/lib/credits'
+import { getClaimableCredits, orgHasCreditRecovery } from '@/lib/credits'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = { title: 'Reports · VericonIQ' }
@@ -38,6 +38,7 @@ export default async function ReportsPage() {
   ])
 
   const activeVendors = allVendors.filter(v => v.status === 'active')
+  const creditFeature = await orgHasCreditRecovery(orgId)
 
   // Per-vendor rollup
   const reportRows = await Promise.all(activeVendors.map(async v => {
@@ -59,7 +60,9 @@ export default async function ReportsPage() {
       breaches = rows.filter(r => r.exemptionStatus !== 'approved').length
     }
 
-    const { total: credits } = await getClaimableCredits({ orgId, contractIds })
+    const { total: credits } = creditFeature
+      ? await getClaimableCredits({ orgId, contractIds })
+      : { total: 0 }
 
     const annualValue = vendorContracts.reduce((s, c) => s + parseFloat(c.annualValue ?? '0'), 0)
     const nextDeadline = vendorContracts
@@ -109,7 +112,7 @@ export default async function ReportsPage() {
               { label: 'Annual value', value: fmtMoney(totals.annualValue) },
               { label: 'Active vendors', value: String(activeVendors.length) },
               { label: 'Open breaches', value: String(totals.breaches) },
-              { label: 'Credits claimable', value: totals.credits > 0 ? fmtMoney(totals.credits) : '$0' },
+              { label: 'Credits claimable', value: !creditFeature ? '—' : totals.credits > 0 ? fmtMoney(totals.credits) : '$0' },
             ].map((t, i) => (
               <div key={t.label} className={`px-5 py-4 ${i < 3 ? 'border-r border-border-soft' : ''}`}>
                 <div className="text-[10.5px] font-bold tracking-eyebrow uppercase text-muted">{t.label}</div>
@@ -150,7 +153,7 @@ export default async function ReportsPage() {
                         ? <span className="text-status-breach-text font-semibold">{r.breaches}</span>
                         : <span className="text-faint">0</span>}
                     </td>
-                    <td className="px-4 py-3 text-ink-soft">{r.credits > 0 ? fmtMoney(r.credits) : '—'}</td>
+                    <td className="px-4 py-3 text-ink-soft">{creditFeature && r.credits > 0 ? fmtMoney(r.credits) : '—'}</td>
                     <td className="px-4 py-3 text-muted whitespace-nowrap">{fmtDate(r.nextDeadline)}</td>
                   </tr>
                 ))}

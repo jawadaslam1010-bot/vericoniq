@@ -11,7 +11,7 @@ export type {
 
 // ─── Enums ──────────────────────────────────────────────────────────────────
 
-export type OrgPlan = 'starter' | 'professional' | 'enterprise'
+export type OrgPlan = 'starter' | 'essentials' | 'professional' | 'enterprise'
 export type OrgType = 'buyer' | 'vendor' | 'both'
 export type UserRole = 'admin' | 'manager' | 'viewer'
 
@@ -45,17 +45,19 @@ export type FeatureFlags = {
 }
 
 export function getFeatureFlags(plan: OrgPlan): FeatureFlags {
+  const paid = plan !== 'starter'
+  const proUp = plan === 'professional' || plan === 'enterprise'
   return {
-    aiChat: plan !== 'starter',
-    whiteLabelReports: plan === 'professional' || plan === 'enterprise',
-    vendorForms: plan !== 'starter',
-    allCadences: plan !== 'starter',
+    aiChat: paid,
+    whiteLabelReports: proUp,
+    vendorForms: paid,
+    allCadences: paid,
     customKpiTemplates: plan === 'enterprise',
     apiAccess: plan === 'enterprise',
     ssoSaml: plan === 'enterprise',
     unlimitedVendors: plan === 'enterprise',
     unlimitedSeats: plan === 'enterprise',
-    reportScheduling: plan !== 'starter',
+    reportScheduling: paid,
   }
 }
 
@@ -85,12 +87,20 @@ export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
     storageMb: 100,
     expiryMonths: 3,
   },
+  essentials: {
+    vendors: 5,
+    contracts: 15,
+    seats: 3,
+    maxFileMb: 10,
+    storageMb: 500,
+    expiryMonths: null,
+  },
   professional: {
     vendors: 25,
     contracts: 100,
     seats: 10,
     maxFileMb: 25,
-    storageMb: 5_000,
+    storageMb: 2_000,
     expiryMonths: null,
   },
   enterprise: {
@@ -103,15 +113,34 @@ export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
   },
 }
 
+// ─── Plan feature gates ──────────────────────────────────────────────────────
+// The "money features" that differentiate Professional from Essentials.
+// Starter (free trial) gets everything within its tiny limits so evaluators
+// see the full product; Essentials trades those features for the low price.
+
+export type PlanFeature = 'vendorPortal' | 'creditRecovery'
+
+export function planHasFeature(plan: OrgPlan | string, feature: PlanFeature): boolean {
+  switch (feature) {
+    case 'vendorPortal':
+    case 'creditRecovery':
+      return plan === 'starter' || plan === 'professional' || plan === 'enterprise'
+    default:
+      return false
+  }
+}
+
 // Back-compat aliases (existing imports)
 export const VENDOR_LIMITS: Record<OrgPlan, number> = {
   starter: PLAN_LIMITS.starter.vendors,
+  essentials: PLAN_LIMITS.essentials.vendors,
   professional: PLAN_LIMITS.professional.vendors,
   enterprise: PLAN_LIMITS.enterprise.vendors,
 }
 
 export const SEAT_LIMITS: Record<OrgPlan, number> = {
   starter: PLAN_LIMITS.starter.seats,
+  essentials: PLAN_LIMITS.essentials.seats,
   professional: PLAN_LIMITS.professional.seats,
   enterprise: PLAN_LIMITS.enterprise.seats,
 }

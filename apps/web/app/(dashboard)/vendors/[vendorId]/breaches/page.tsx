@@ -8,6 +8,7 @@ import { db } from '@contractly/db'
 import { eq, and, isNull, desc } from '@contractly/db'
 import { vendors, users, contracts, kpis, kpiResults, submissionPeriods } from '@contractly/db/schema'
 import { computeKpiCredit, contractMrc } from '@/lib/kpi-scoring'
+import { orgHasCreditRecovery } from '@/lib/credits'
 
 function fmtMoney(n: number): string {
   return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 }).format(n)
@@ -34,6 +35,8 @@ export default async function BreachesPage({ params }: { params: Promise<{ vendo
     .where(and(eq(vendors.id, vendorId), eq(vendors.orgId, userRecord.orgId), isNull(vendors.deletedAt)))
     .limit(1)
   if (!vendor) notFound()
+
+  const creditFeature = await orgHasCreditRecovery(userRecord.orgId)
 
   // All breached, non-exempt results across this vendor's contracts.
   const rows = await db
@@ -67,12 +70,14 @@ export default async function BreachesPage({ params }: { params: Promise<{ vendo
       target: r.kpi.targetValue,
       operator: r.kpi.targetOperator,
       unit: r.kpi.unit,
-      credit: computeKpiCredit({
-        kpi: r.kpi,
-        resultStatus: 'breach',
-        actualValue: r.result.actualValue,
-        mrc: contractMrc(r.contract),
-      }),
+      credit: creditFeature
+        ? computeKpiCredit({
+            kpi: r.kpi,
+            resultStatus: 'breach',
+            actualValue: r.result.actualValue,
+            mrc: contractMrc(r.contract),
+          })
+        : 0,
       pending: r.result.exemptionStatus === 'pending',
     }))
 
@@ -104,7 +109,8 @@ export default async function BreachesPage({ params }: { params: Promise<{ vendo
         </div>
         <div className="rounded-lg border border-border bg-surface px-5 py-3">
           <div className="text-[10.5px] font-bold tracking-eyebrow uppercase text-muted">Estimated credits</div>
-          <div className="font-serif text-[26px] text-ink mt-0.5">{fmtMoney(totalCredit)}</div>
+          <div className="font-serif text-[26px] text-ink mt-0.5">{creditFeature ? fmtMoney(totalCredit) : '—'}</div>
+          {!creditFeature && <div className="text-[11px] text-muted">Available on Professional</div>}
         </div>
       </div>
 

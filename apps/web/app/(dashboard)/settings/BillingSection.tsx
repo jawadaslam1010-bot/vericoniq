@@ -36,6 +36,10 @@ export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: (r) => { if (r.url) window.location.href = r.url },
     onError: (e) => { toast.error(e.message); setBusy(null) },
   })
+  const startCheckout = (tier: 'essentials' | 'professional', interval: 'monthly' | 'annual') => {
+    setBusy(`${tier}-${interval}`)
+    checkout.mutate({ tier, interval })
+  }
   const portal = api.billing.createPortalSession.useMutation({
     onSuccess: (r) => { if (r.url) window.location.href = r.url },
     onError: (e) => { toast.error(e.message); setBusy(null) },
@@ -51,7 +55,9 @@ export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
   }
 
   const isPro = data.plan === 'professional'
+  const isEssentials = data.plan === 'essentials'
   const isEnterprise = data.plan === 'enterprise'
+  const isPaid = isPro || isEssentials
   const storageMbUsed = Math.round(data.usage.storageBytes / (1024 * 1024) * 10) / 10
 
   return (
@@ -59,15 +65,15 @@ export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
       <div className="flex items-center justify-between mb-1">
         <h2 className="text-[15px] font-semibold text-ink">Plan & billing</h2>
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-semibold ${
-          isPro || isEnterprise ? 'bg-primary-50 text-primary' : 'bg-hover text-ink-soft'
+          isPaid || isEnterprise ? 'bg-primary-50 text-primary' : 'bg-hover text-ink-soft'
         }`}>
-          {isEnterprise ? 'Enterprise' : isPro ? 'Professional' : 'Free'}
+          {isEnterprise ? 'Enterprise' : isPro ? 'Professional' : isEssentials ? 'Essentials' : 'Free'}
         </span>
       </div>
       <p className="text-[12.5px] text-muted mb-5">
         {isEnterprise
           ? 'Custom enterprise agreement.'
-          : isPro
+          : isPaid
           ? `Subscription ${data.subscriptionStatus ?? 'active'}.`
           : data.freeTierExpired
           ? 'Your free tier has ended — upgrade to keep building your portfolio.'
@@ -85,28 +91,60 @@ export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
 
       {/* Actions */}
       {isAdmin && !isEnterprise && (
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="space-y-3">
           {!isPro && (
-            <>
-              <button
-                onClick={() => { setBusy('monthly'); checkout.mutate({ interval: 'monthly' }) }}
-                disabled={busy != null || !data.billingEnabled}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-white text-[13px] font-semibold px-4 py-2 hover:bg-primary-hover disabled:opacity-50"
-              >
-                {busy === 'monthly' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                Upgrade to Pro — $299/mo
-              </button>
-              <button
-                onClick={() => { setBusy('annual'); checkout.mutate({ interval: 'annual' }) }}
-                disabled={busy != null || !data.billingEnabled}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-border text-[13px] font-medium text-ink-soft px-4 py-2 hover:bg-hover disabled:opacity-50"
-              >
-                {busy === 'annual' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                Annual — $2,990/yr (2 months free)
-              </button>
-            </>
+            <div className="grid sm:grid-cols-2 gap-3 max-w-2xl">
+              {!isPaid && (
+                <div className="rounded-lg border border-border p-4">
+                  <div className="text-[13.5px] font-semibold text-ink">Essentials</div>
+                  <div className="text-[12px] text-muted mt-0.5 mb-3">5 vendors · 15 contracts · tracking &amp; alerts</div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => startCheckout('essentials', 'monthly')}
+                      disabled={busy != null || !data.billingEnabled}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border text-[12.5px] font-semibold text-ink px-3 py-1.5 hover:bg-hover disabled:opacity-50"
+                    >
+                      {busy === 'essentials-monthly' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      $99/mo
+                    </button>
+                    <button
+                      onClick={() => startCheckout('essentials', 'annual')}
+                      disabled={busy != null || !data.billingEnabled}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border text-[12.5px] font-medium text-ink-soft px-3 py-1.5 hover:bg-hover disabled:opacity-50"
+                    >
+                      {busy === 'essentials-annual' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      $990/yr
+                    </button>
+                  </div>
+                </div>
+              )}
+              <div className="rounded-lg border-2 border-primary p-4">
+                <div className="text-[13.5px] font-semibold text-ink flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />Professional
+                </div>
+                <div className="text-[12px] text-muted mt-0.5 mb-3">25 vendors · 100 contracts · portal &amp; credit recovery</div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => startCheckout('professional', 'monthly')}
+                    disabled={busy != null || !data.billingEnabled}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary text-white text-[12.5px] font-semibold px-3 py-1.5 hover:bg-primary-hover disabled:opacity-50"
+                  >
+                    {busy === 'professional-monthly' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    $299/mo
+                  </button>
+                  <button
+                    onClick={() => startCheckout('professional', 'annual')}
+                    disabled={busy != null || !data.billingEnabled}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-border text-[12.5px] font-medium text-ink-soft px-3 py-1.5 hover:bg-hover disabled:opacity-50"
+                  >
+                    {busy === 'professional-annual' && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    $2,990/yr
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
-          {isPro && (
+          {isPaid && (
             <button
               onClick={() => { setBusy('portal'); portal.mutate() }}
               disabled={busy != null || !data.billingEnabled}

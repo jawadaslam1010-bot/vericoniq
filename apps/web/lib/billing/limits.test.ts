@@ -73,25 +73,68 @@ describe('checkUploadAllowed', () => {
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.reason).toBe('expired')
   })
-  it('pro allows bigger files (25MB) and more storage (5GB)', () => {
-    expect(checkUploadAllowed({ org: proOrg, fileSizeBytes: 20 * MB, currentStorageBytes: 4000 * MB, now }).ok).toBe(true)
+  it('pro allows bigger files (25MB) and more storage (2GB)', () => {
+    expect(checkUploadAllowed({ org: proOrg, fileSizeBytes: 20 * MB, currentStorageBytes: 1500 * MB, now }).ok).toBe(true)
     expect(checkUploadAllowed({ org: proOrg, fileSizeBytes: 30 * MB, currentStorageBytes: 0, now }).ok).toBe(false)
   })
 })
 
 describe('planFromSubscription', () => {
-  it('active/trialing/past_due keep professional', () => {
+  it('active/trialing/past_due keep professional (default tier)', () => {
     for (const status of ['active', 'trialing', 'past_due']) {
       const r = planFromSubscription({ status, subscriptionId: 'sub_1' })
       expect(r.plan).toBe('professional')
       expect(r.stripeSubscriptionId).toBe('sub_1')
     }
   })
+  it('maps the essentials tier from metadata', () => {
+    const r = planFromSubscription({ status: 'active', subscriptionId: 'sub_1', tier: 'essentials' })
+    expect(r.plan).toBe('essentials')
+  })
+  it('unknown tier metadata falls back to professional', () => {
+    const r = planFromSubscription({ status: 'active', subscriptionId: 'sub_1', tier: 'bogus' })
+    expect(r.plan).toBe('professional')
+  })
   it('canceled/unpaid/incomplete_expired drop to starter and clear the sub id', () => {
     for (const status of ['canceled', 'unpaid', 'incomplete_expired', 'paused']) {
-      const r = planFromSubscription({ status, subscriptionId: 'sub_1' })
+      const r = planFromSubscription({ status, subscriptionId: 'sub_1', tier: 'essentials' })
       expect(r.plan).toBe('starter')
       expect(r.stripeSubscriptionId).toBeNull()
+    }
+  })
+})
+
+describe('essentials tier', () => {
+  const essOrg = { plan: 'essentials' as const, subscriptionStatus: 'active', trialEndsAt: null }
+  it('never expires (paid plan)', () => {
+    expect(isFreeTierExpired({ ...essOrg, trialEndsAt: past }, now)).toBe(false)
+  })
+  it('caps at 5 vendors / 15 contracts', () => {
+    expect(checkCreateAllowed({ org: essOrg, kind: 'vendor', currentCount: 4, now }).ok).toBe(true)
+    expect(checkCreateAllowed({ org: essOrg, kind: 'vendor', currentCount: 5, now }).ok).toBe(false)
+    expect(checkCreateAllowed({ org: essOrg, kind: 'contract', currentCount: 14, now }).ok).toBe(true)
+    expect(checkCreateAllowed({ org: essOrg, kind: 'contract', currentCount: 15, now }).ok).toBe(false)
+  })
+  it('caps storage at 500MB, files at 10MB', () => {
+    expect(checkUploadAllowed({ org: essOrg, fileSizeBytes: 9 * MB, currentStorageBytes: 0, now }).ok).toBe(true)
+    expect(checkUploadAllowed({ org: essOrg, fileSizeBytes: 11 * MB, currentStorageBytes: 0, now }).ok).toBe(false)
+    expect(checkUploadAllowed({ org: essOrg, fileSizeBytes: 6 * MB, currentStorageBytes: 495 * MB, now }).ok).toBe(false)
+  })
+  it('pro storage is now capped at 2GB', () => {
+    const pro = { plan: 'professional' as const, subscriptionStatus: 'active', trialEndsAt: null }
+    expect(checkUploadAllowed({ org: pro, fileSizeBytes: 20 * MB, currentStorageBytes: 1900 * MB, now }).ok).toBe(true)
+    expect(checkUploadAllowed({ org: pro, fileSizeBytes: 20 * MB, currentStorageBytes: 2000 * MB, now }).ok).toBe(false)
+  })
+})
+
+describe('planHasFeature', () => {
+  it('essentials lacks portal and credit recovery; others have them', async () => {
+    const { planHasFeature } = await import('@contractly/types')
+    expect(planHasFeature('essentials', 'vendorPortal')).toBe(false)
+    expect(planHasFeature('essentials', 'creditRecovery')).toBe(false)
+    for (const plan of ['starter', 'professional', 'enterprise']) {
+      expect(planHasFeature(plan, 'vendorPortal')).toBe(true)
+      expect(planHasFeature(plan, 'creditRecovery')).toBe(true)
     }
   })
 })

@@ -28,7 +28,7 @@ async function applySubscription(sub: Stripe.Subscription) {
     console.error('[stripe/webhook] could not resolve org for subscription', sub.id)
     return
   }
-  const update = planFromSubscription({ status: sub.status, subscriptionId: sub.id })
+  const update = planFromSubscription({ status: sub.status, subscriptionId: sub.id, tier: sub.metadata?.tier })
   await db
     .update(organisations)
     .set({

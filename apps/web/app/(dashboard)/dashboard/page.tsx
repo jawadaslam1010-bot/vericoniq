@@ -111,8 +111,13 @@ async function DashboardData() {
     0
   )
 
-  // Claimable service credits across the whole org (locked-period breaches)
-  const { total: creditsClaimable, count: creditsClaims } = await getClaimableCredits({ orgId })
+  // Claimable service credits across the whole org (locked-period breaches).
+  // Credit recovery is a Professional feature.
+  const { planHasFeature } = await import('@contractly/types')
+  const creditFeature = planHasFeature(org?.plan ?? 'starter', 'creditRecovery')
+  const { total: creditsClaimable, count: creditsClaims } = creditFeature
+    ? await getClaimableCredits({ orgId })
+    : { total: 0, count: 0 }
 
   // ── Health breakdown ───────────────────────────────────────────────────────
   const scoredVendors = activeVendors.filter((v) => v.healthScore != null)
@@ -419,10 +424,12 @@ async function DashboardData() {
                 Service credits claimable
               </div>
               <div className="font-serif text-[28px] tracking-tight mt-1">
-                {creditsClaimable > 0 ? fmtValue(creditsClaimable) : '$0'}
+                {!creditFeature ? '—' : creditsClaimable > 0 ? fmtValue(creditsClaimable) : '$0'}
               </div>
               <div className="text-[11.5px] text-muted mt-0.5">
-                {creditsClaimable > 0
+                {!creditFeature
+                  ? 'Credit recovery is available on the Professional plan'
+                  : creditsClaimable > 0
                   ? `Across ${creditsClaims} breached KPI${creditsClaims !== 1 ? 's' : ''} in locked periods`
                   : 'No open claims · add KPI results to track'}
               </div>
