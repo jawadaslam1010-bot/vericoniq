@@ -22,7 +22,7 @@ const PUBLIC_PATHS = [
 // shared password. Token-protected flows (cron, vendor portal, invitations) are
 // exempt so they still work for external testers. Unset the env var to remove
 // the gate entirely.
-const BETA_EXEMPT_PREFIXES = ['/beta', '/about', '/api/beta', '/api/cron', '/api/stripe', '/portal', '/api/portal', '/invite', '/api/invite']
+const BETA_EXEMPT_PREFIXES = ['/beta', '/about', '/api/beta', '/api/cron', '/api/stripe', '/api/waitlist', '/portal', '/api/portal', '/invite', '/api/invite']
 
 export async function middleware(request: NextRequest) {
   const { pathname: earlyPath } = request.nextUrl
