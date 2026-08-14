@@ -24,6 +24,10 @@ function getDb(): DrizzleDb {
   _client = postgres(connectionString, {
     max: 1, // Serverless: single connection per invocation
     ssl: 'require',
+    // Supabase transaction pooler (port 6543) does not support prepared
+    // statements — leaving them on causes intermittent stalls and
+    // "prepared statement does not exist" errors.
+    prepare: false,
   })
   _db = drizzle(_client, { schema })
   return _db

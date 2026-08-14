@@ -44,78 +44,62 @@ export default async function OrgDrilldownPage({
 
   if (!org) notFound()
 
-  // Parallel data fetches
-  const [
-    orgUsers,
-    orgVendors,
-    orgContracts,
-    kpiCount,
-    periodRows,
-    recentResults,
-    recentTokens,
-  ] = await Promise.all([
-    // Users
-    db.select().from(users).where(eq(users.orgId, orgId)).orderBy(asc(users.createdAt)),
+  // Sequential data fetches — concurrent selects deadlock the single-connection
+  // pool against the Supabase transaction pooler (each query is milliseconds).
+  const orgUsers = await db.select().from(users).where(eq(users.orgId, orgId)).orderBy(asc(users.createdAt))
 
-    // Vendors
-    db.select().from(vendors).where(eq(vendors.orgId, orgId)).orderBy(asc(vendors.name)),
+  const orgVendors = await db.select().from(vendors).where(eq(vendors.orgId, orgId)).orderBy(asc(vendors.name))
 
-    // Contracts with vendor name
-    db
-      .select({ contract: contracts, vendorName: vendors.name })
-      .from(contracts)
-      .innerJoin(vendors, eq(contracts.vendorId, vendors.id))
-      .where(eq(contracts.orgId, orgId))
-      .orderBy(desc(contracts.createdAt)),
+  const orgContracts = await db
+    .select({ contract: contracts, vendorName: vendors.name })
+    .from(contracts)
+    .innerJoin(vendors, eq(contracts.vendorId, vendors.id))
+    .where(eq(contracts.orgId, orgId))
+    .orderBy(desc(contracts.createdAt))
 
-    // Active KPI count
-    db
-      .select({ n: count() })
-      .from(kpis)
-      .where(and(eq(kpis.orgId, orgId), eq(kpis.isActive, true)))
-      .then(r => Number(r[0]?.n ?? 0)),
+  const kpiCount = await db
+    .select({ n: count() })
+    .from(kpis)
+    .where(and(eq(kpis.orgId, orgId), eq(kpis.isActive, true)))
+    .then(r => Number(r[0]?.n ?? 0))
 
-    // Submission periods with result stats
-    db
-      .select({
-        period: submissionPeriods,
-        contractName: contracts.name,
-        vendorName: vendors.name,
-        total:   sql<number>`count(${kpiResults.id})`,
-        entered: sql<number>`count(case when ${kpiResults.actualValue} is not null or ${kpiResults.exemptionClaimed} = true then 1 end)`,
-        breaches: sql<number>`count(case when ${kpiResults.resultStatus} = 'breach' then 1 end)`,
-      })
-      .from(submissionPeriods)
-      .leftJoin(kpiResults, eq(kpiResults.periodId, submissionPeriods.id))
-      .innerJoin(contracts, eq(submissionPeriods.contractId, contracts.id))
-      .innerJoin(vendors, eq(contracts.vendorId, vendors.id))
-      .where(eq(submissionPeriods.orgId, orgId))
-      .groupBy(submissionPeriods.id, contracts.name, vendors.name)
-      .orderBy(desc(submissionPeriods.updatedAt))
-      .limit(20),
+  const periodRows = await db
+    .select({
+      period: submissionPeriods,
+      contractName: contracts.name,
+      vendorName: vendors.name,
+      total:   sql<number>`count(${kpiResults.id})`,
+      entered: sql<number>`count(case when ${kpiResults.actualValue} is not null or ${kpiResults.exemptionClaimed} = true then 1 end)`,
+      breaches: sql<number>`count(case when ${kpiResults.resultStatus} = 'breach' then 1 end)`,
+    })
+    .from(submissionPeriods)
+    .leftJoin(kpiResults, eq(kpiResults.periodId, submissionPeriods.id))
+    .innerJoin(contracts, eq(submissionPeriods.contractId, contracts.id))
+    .innerJoin(vendors, eq(contracts.vendorId, vendors.id))
+    .where(eq(submissionPeriods.orgId, orgId))
+    .groupBy(submissionPeriods.id, contracts.name, vendors.name)
+    .orderBy(desc(submissionPeriods.updatedAt))
+    .limit(20)
 
-    // Recent KPI result saves
-    db
-      .select({
-        result: kpiResults,
-        kpiName: kpis.name,
-        contractName: contracts.name,
-      })
-      .from(kpiResults)
-      .innerJoin(kpis, eq(kpiResults.kpiId, kpis.id))
-      .innerJoin(contracts, eq(kpiResults.contractId, contracts.id))
-      .where(eq(kpiResults.orgId, orgId))
-      .orderBy(desc(kpiResults.updatedAt))
-      .limit(8),
+  const recentResults = await db
+    .select({
+      result: kpiResults,
+      kpiName: kpis.name,
+      contractName: contracts.name,
+    })
+    .from(kpiResults)
+    .innerJoin(kpis, eq(kpiResults.kpiId, kpis.id))
+    .innerJoin(contracts, eq(kpiResults.contractId, contracts.id))
+    .where(eq(kpiResults.orgId, orgId))
+    .orderBy(desc(kpiResults.updatedAt))
+    .limit(8)
 
-    // Portal tokens
-    db
-      .select()
-      .from(portalTokens)
-      .where(eq(portalTokens.orgId, orgId))
-      .orderBy(desc(portalTokens.createdAt))
-      .limit(10),
-  ])
+  const recentTokens = await db
+    .select()
+    .from(portalTokens)
+    .where(eq(portalTokens.orgId, orgId))
+    .orderBy(desc(portalTokens.createdAt))
+    .limit(10)
 
   // Log access
   await logPlatformAction({

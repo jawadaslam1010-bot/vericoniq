@@ -32,21 +32,21 @@ export default async function PlatformAdminPage() {
 
   const orgIds = orgs.map(o => o.id)
 
-  // Parallel count queries
-  const [userCounts, vendorCounts, contractCounts, kpiCounts, periodCounts] = await Promise.all([
-    db.select({ orgId: users.orgId, n: count() }).from(users).groupBy(users.orgId),
-    db.select({ orgId: vendors.orgId, n: count() }).from(vendors).groupBy(vendors.orgId),
-    db.select({ orgId: contracts.orgId, n: count() }).from(contracts).groupBy(contracts.orgId),
-    db.select({ orgId: kpis.orgId, n: count() }).from(kpis).where(eq(kpis.isActive, true)).groupBy(kpis.orgId),
-    // Latest period updated_at per org
-    db
-      .select({
-        orgId: submissionPeriods.orgId,
-        lastActivity: sql<string>`max(${submissionPeriods.updatedAt})`,
-      })
-      .from(submissionPeriods)
-      .groupBy(submissionPeriods.orgId),
-  ])
+  // Sequential count queries — concurrent groupBy selects deadlock the
+  // single-connection pool against the Supabase transaction pooler (each is
+  // ~15ms, so serialization costs nothing).
+  const userCounts = await db.select({ orgId: users.orgId, n: count() }).from(users).groupBy(users.orgId)
+  const vendorCounts = await db.select({ orgId: vendors.orgId, n: count() }).from(vendors).groupBy(vendors.orgId)
+  const contractCounts = await db.select({ orgId: contracts.orgId, n: count() }).from(contracts).groupBy(contracts.orgId)
+  const kpiCounts = await db.select({ orgId: kpis.orgId, n: count() }).from(kpis).where(eq(kpis.isActive, true)).groupBy(kpis.orgId)
+  // Latest period updated_at per org
+  const periodCounts = await db
+    .select({
+      orgId: submissionPeriods.orgId,
+      lastActivity: sql<string>`max(${submissionPeriods.updatedAt})`,
+    })
+    .from(submissionPeriods)
+    .groupBy(submissionPeriods.orgId)
 
   const toMap = <T extends { orgId: string }>(arr: T[]) =>
     Object.fromEntries(arr.map(r => [r.orgId, r]))
