@@ -38,6 +38,18 @@ export async function POST(req: NextRequest) {
   const pt = await validateToken(token)
   if (!pt) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 })
 
+  // Writes are only allowed while the period is open — once submitted or
+  // locked, results are immutable from the portal.
+  const { submissionPeriods } = await import('@contractly/db/schema')
+  const [period] = await db
+    .select({ status: submissionPeriods.status })
+    .from(submissionPeriods)
+    .where(eq(submissionPeriods.id, pt.periodId))
+    .limit(1)
+  if (!period || period.status !== 'open') {
+    return NextResponse.json({ error: 'This period is no longer accepting changes' }, { status: 409 })
+  }
+
   // Verify this result belongs to this period
   const [existing] = await db
     .select()
