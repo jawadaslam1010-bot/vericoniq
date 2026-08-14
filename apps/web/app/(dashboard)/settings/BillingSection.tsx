@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2, Sparkles, CreditCard } from 'lucide-react'
 import { api } from '@/lib/trpc/client'
@@ -29,8 +29,30 @@ function UsageBar({ label, used, limit, unit }: { label: string; used: number; l
 }
 
 export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
+  const utils = api.useUtils()
   const { data, isLoading } = api.billing.getOverview.useQuery()
   const [busy, setBusy] = useState<string | null>(null)
+
+  const reconcile = api.billing.reconcile.useMutation({
+    onSuccess: (r) => {
+      utils.billing.getOverview.invalidate()
+      if (r.changed && r.plan && r.plan !== 'starter') toast.success(`Subscription confirmed — you're on ${r.plan}.`)
+      setBusy(null)
+    },
+    onError: () => setBusy(null),
+  })
+
+  // After returning from Stripe Checkout, confirm the subscription directly —
+  // don't rely solely on the webhook having arrived first.
+  const reconciledOnce = useRef(false)
+  useEffect(() => {
+    if (reconciledOnce.current || !isAdmin) return
+    if (typeof window !== 'undefined' && window.location.search.includes('billing=success')) {
+      reconciledOnce.current = true
+      reconcile.mutate()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin])
 
   const checkout = api.billing.createCheckoutSession.useMutation({
     onSuccess: (r) => { if (r.url) window.location.href = r.url },
@@ -156,6 +178,15 @@ export function BillingSection({ isAdmin }: { isAdmin: boolean }) {
           )}
           {!data.billingEnabled && (
             <span className="text-[11.5px] text-faint">Billing is not configured in this environment yet.</span>
+          )}
+          {data.billingEnabled && !isPaid && (
+            <button
+              onClick={() => { setBusy('reconcile'); reconcile.mutate() }}
+              disabled={busy != null}
+              className="block text-[11.5px] text-muted hover:text-primary underline underline-offset-2 disabled:opacity-50"
+            >
+              {busy === 'reconcile' ? 'Checking subscription…' : 'Just upgraded? Refresh subscription status'}
+            </button>
           )}
         </div>
       )}

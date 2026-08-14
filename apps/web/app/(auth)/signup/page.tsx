@@ -42,6 +42,7 @@ type SignupForm = z.infer<typeof signupSchema>
 export default function SignupPage() {
   const router = useRouter()
   const [verificationSent, setVerificationSent] = useState(false)
+  const [accountCreated, setAccountCreated] = useState(false)
   const supabase = createClient()
 
   const form = useForm<SignupForm>({ resolver: zodResolver(signupSchema) })
@@ -75,13 +76,34 @@ export default function SignupPage() {
         password: data.password,
       })
       if (signInError) {
-        toast.error('Account created — please sign in.')
-        router.push('/login')
+        // Account exists but auto-login failed — show a clear success screen
+        // instead of a fleeting toast + redirect.
+        setAccountCreated(true)
         return
       }
       router.push('/dashboard')
       router.refresh()
     }
+  }
+
+  if (accountCreated) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Your account has been created 🎉</CardTitle>
+          <CardDescription>
+            Your organisation <span className="font-medium text-slate-900">{form.getValues('orgName')}</span> is
+            ready. Sign in with <span className="font-medium text-slate-900">{form.getValues('email')}</span> and
+            the password you just chose.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button className="w-full" onClick={() => router.push('/login')}>
+            Sign in to your account
+          </Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (verificationSent) {

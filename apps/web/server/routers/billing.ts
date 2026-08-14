@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { getStripe, billingEnabled, priceIdFor } from '@/lib/billing/stripe'
 import { getOrgBilling, getOrgUsage, planLimits, isFreeTierExpired } from '@/lib/billing/limits'
+import { planFromSubscription } from '@/lib/billing/webhook-logic'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
@@ -85,6 +86,47 @@ export const billingRouter = router({
 
       return { url: session.url }
     }),
+
+  // ── Reconcile plan directly from Stripe ────────────────────────────────────
+  // Self-healing fallback for missed webhooks: reads the customer's
+  // subscriptions from Stripe and applies the same mapping the webhook uses.
+  reconcile: adminProcedure.mutation(async ({ ctx }) => {
+    if (!billingEnabled()) {
+      throw new TRPCError({ code: 'PRECONDITION_FAILED', message: 'Billing is not configured yet' })
+    }
+    const [org] = await ctx.db
+      .select({ id: organisations.id, stripeCustomerId: organisations.stripeCustomerId })
+      .from(organisations)
+      .where(eq(organisations.id, ctx.user.orgId))
+      .limit(1)
+    if (!org?.stripeCustomerId) return { plan: null, changed: false }
+
+    const subs = await getStripe().subscriptions.list({
+      customer: org.stripeCustomerId,
+      status: 'all',
+      limit: 10,
+    })
+    // Prefer a subscription that still grants access; otherwise the newest.
+    const ranked = [...subs.data].sort((a, b) => {
+      const live = (s: typeof a) => (['active', 'trialing', 'past_due'].includes(s.status) ? 1 : 0)
+      return live(b) - live(a) || b.created - a.created
+    })
+    const sub = ranked[0]
+    if (!sub) return { plan: null, changed: false }
+
+    const update = planFromSubscription({ status: sub.status, subscriptionId: sub.id, tier: sub.metadata?.tier })
+    await ctx.db
+      .update(organisations)
+      .set({
+        plan: update.plan,
+        subscriptionStatus: update.subscriptionStatus,
+        stripeSubscriptionId: update.stripeSubscriptionId,
+        updatedAt: new Date(),
+      })
+      .where(eq(organisations.id, org.id))
+
+    return { plan: update.plan, changed: true }
+  }),
 
   // ── Manage an existing subscription via the Customer Portal ────────────────
   createPortalSession: adminProcedure.mutation(async ({ ctx }) => {
