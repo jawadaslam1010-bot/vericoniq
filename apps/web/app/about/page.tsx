@@ -12,7 +12,6 @@ import {
   TrendingUp,
   CheckCircle,
   Mail,
-  Lock,
 } from 'lucide-react'
 
 const FEATURES = [
@@ -118,8 +117,7 @@ export default function AboutPage() {
             className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1.5"
             style={{ backgroundColor: '#0d9488', color: 'white' }}
           >
-            <Lock className="h-3 w-3" />
-            Private beta
+            Sign in
           </Link>
         </div>
       </nav>
@@ -261,11 +259,11 @@ export default function AboutPage() {
       {/* Footer CTA */}
       <section className="max-w-2xl mx-auto px-6 py-16 text-center">
         <p className="text-sm" style={{ color: '#78716c' }}>
-          VericonIQ is currently in private beta. Have a beta password?{' '}
-          <Link href="/login" className="font-semibold underline underline-offset-2" style={{ color: '#0d9488' }}>
-            Sign in here
+          Ready to see your contracts clearly?{' '}
+          <Link href="/signup" className="font-semibold underline underline-offset-2" style={{ color: '#0d9488' }}>
+            Start free
           </Link>
-          {' '}— or contact us above to request access.
+          {' '}— or contact us above for a walkthrough.
         </p>
         <p className="mt-6 text-xs" style={{ color: '#a8a29e' }}>
           © {new Date().getFullYear()} VericonIQ · vericoniq.com

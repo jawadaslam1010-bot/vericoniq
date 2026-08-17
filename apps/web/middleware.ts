@@ -28,6 +28,13 @@ export async function middleware(request: NextRequest) {
   const { pathname: earlyPath } = request.nextUrl
 
   const betaPassword = process.env.BETA_GATE_PASSWORD
+  // With the gate off, the /beta page is an orphan — send visitors home.
+  if (!betaPassword && (earlyPath === '/beta' || earlyPath.startsWith('/beta/'))) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/'
+    url.search = ''
+    return NextResponse.redirect(url)
+  }
   if (betaPassword) {
     const hasBetaAccess = request.cookies.get('viq_beta')?.value === betaPassword
     // '/' and '/about' stay public — marketing pages; the app itself is gated.

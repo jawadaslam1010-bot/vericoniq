@@ -155,7 +155,7 @@ export default function LandingPage() {
               className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold"
               style={{ background: '#f0fdfa', color: TEAL, border: '1px solid #ccfbf1' }}
             >
-              <Lock className="h-3 w-3" /> Private beta — request access below
+              Free for 3 months — no credit card required
             </span>
             <h1
               className="mt-5 font-normal"
@@ -170,14 +170,14 @@ export default function LandingPage() {
               buried in schedule 6, and no credit goes unclaimed.
             </p>
             <div className="mt-8 flex flex-col sm:flex-row gap-3">
-              <a
-                href="#request"
+              <Link
+                href="/signup"
                 className="inline-flex items-center justify-center gap-2 rounded-xl text-white font-semibold px-6 py-3.5 text-sm hover:opacity-90 transition-opacity"
                 style={{ backgroundColor: TEAL }}
               >
-                Request early access
+                Start free
                 <ArrowRight className="h-4 w-4" />
-              </a>
+              </Link>
               <a
                 href="#how"
                 className="inline-flex items-center justify-center gap-2 rounded-xl font-medium px-6 py-3.5 text-sm transition-colors"
@@ -280,9 +280,9 @@ export default function LandingPage() {
                 <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
               ))}
             </ul>
-            <a href="#request" className="mt-6 inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors" style={{ border: `1px solid ${BORDER}`, color: SOFT }}>
-              Request access
-            </a>
+            <Link href="/signup" className="mt-6 inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors" style={{ border: `1px solid ${BORDER}`, color: SOFT }}>
+              Get started
+            </Link>
           </div>
           {/* Essentials */}
           <div className="rounded-2xl p-6 flex flex-col" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
@@ -297,9 +297,9 @@ export default function LandingPage() {
                 <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
               ))}
             </ul>
-            <a href="#request" className="mt-6 inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors" style={{ border: `1px solid ${BORDER}`, color: SOFT }}>
-              Request access
-            </a>
+            <Link href="/signup" className="mt-6 inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-medium transition-colors" style={{ border: `1px solid ${BORDER}`, color: SOFT }}>
+              Get started
+            </Link>
           </div>
           {/* Professional */}
           <div className="rounded-2xl p-6 flex flex-col relative" style={{ background: 'white', border: `2px solid ${TEAL}`, boxShadow: '0 12px 40px rgba(13,148,136,0.12)' }}>
@@ -317,9 +317,9 @@ export default function LandingPage() {
                 <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
               ))}
             </ul>
-            <a href="#request" className="mt-6 inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: TEAL }}>
-              Request access
-            </a>
+            <Link href="/signup" className="mt-6 inline-flex justify-center rounded-lg px-4 py-2.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity" style={{ background: TEAL }}>
+              Start free, upgrade anytime
+            </Link>
           </div>
           {/* Enterprise */}
           <div className="rounded-2xl p-6 flex flex-col" style={{ background: 'white', border: `1px solid ${BORDER}` }}>
@@ -371,18 +371,19 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Request access / waitlist */}
+      {/* Guided start / demo request */}
       <section id="request" className="py-20" style={{ background: '#10312d' }}>
         <div className="max-w-2xl mx-auto px-6">
           <div className="text-center mb-10">
-            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#5eead4' }}>Private beta</span>
+            <span className="text-xs font-semibold uppercase tracking-widest" style={{ color: '#5eead4' }}>Prefer a guided start?</span>
             <h2 className="mt-3 text-3xl font-normal text-white" style={{ fontFamily: SERIF }}>
-              Request early access
+              Book a walkthrough with the founder
             </h2>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: '#b8c4c1' }}>
-              We&apos;re onboarding a small group of teams. Tell us about your contract portfolio and
-              we&apos;ll send you a beta invitation — early testers get{' '}
-              <strong style={{ color: 'white' }}>priority onboarding and a direct line to the founder</strong>.
+              Tell us about your contract portfolio and we&apos;ll walk you through VericonIQ on one of
+              your own contracts — or just{' '}
+              <Link href="/signup" className="underline underline-offset-2" style={{ color: 'white' }}>start free now</Link>{' '}
+              and explore it yourself.
             </p>
           </div>
 
@@ -392,7 +393,7 @@ export default function LandingPage() {
                 <Check className="h-6 w-6" style={{ color: '#5eead4' }} />
               </div>
               <h3 className="font-bold text-lg text-white mb-2">You&apos;re on the list</h3>
-              <p className="text-sm" style={{ color: '#b8c4c1' }}>We&apos;ll be in touch with your beta invitation soon.</p>
+              <p className="text-sm" style={{ color: '#b8c4c1' }}>We&apos;ll be in touch shortly to set up your walkthrough.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="rounded-2xl p-8 space-y-4" style={{ background: 'white' }}>
@@ -432,7 +433,7 @@ export default function LandingPage() {
               <button type="submit" disabled={status === 'loading'}
                 className="w-full rounded-xl text-white font-semibold px-6 py-3 text-sm hover:opacity-90 transition-opacity disabled:opacity-60"
                 style={{ backgroundColor: TEAL }}>
-                {status === 'loading' ? 'Sending…' : 'Request beta access'}
+                {status === 'loading' ? 'Sending…' : 'Request a walkthrough'}
               </button>
               {status === 'error' && (
                 <p className="text-sm text-center" style={{ color: '#dc2626' }}>Something went wrong — please try again.</p>
