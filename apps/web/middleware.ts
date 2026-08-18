@@ -18,34 +18,16 @@ const PUBLIC_PATHS = [
   '/api/stripe/',  // Stripe webhooks (signature-verified)
 ]
 
-// Beta gate — when BETA_GATE_PASSWORD is set, the whole site sits behind a
-// shared password. Token-protected flows (cron, vendor portal, invitations) are
-// exempt so they still work for external testers. Unset the env var to remove
-// the gate entirely.
-const BETA_EXEMPT_PREFIXES = ['/beta', '/about', '/api/beta', '/api/cron', '/api/stripe', '/api/waitlist', '/portal', '/api/portal', '/invite', '/api/invite']
-
 export async function middleware(request: NextRequest) {
   const { pathname: earlyPath } = request.nextUrl
 
-  const betaPassword = process.env.BETA_GATE_PASSWORD
-  // With the gate off, the /beta page is an orphan — send visitors home.
-  if (!betaPassword && (earlyPath === '/beta' || earlyPath.startsWith('/beta/'))) {
+  // The beta gate has been retired — the site is fully public. The /beta page
+  // is an orphan now; send any lingering bookmarks home.
+  if (earlyPath === '/beta' || earlyPath.startsWith('/beta/')) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     url.search = ''
     return NextResponse.redirect(url)
-  }
-  if (betaPassword) {
-    const hasBetaAccess = request.cookies.get('viq_beta')?.value === betaPassword
-    // '/' and '/about' stay public — marketing pages; the app itself is gated.
-    const isExempt = earlyPath === '/' || earlyPath === '/about'
-      || BETA_EXEMPT_PREFIXES.some(p => earlyPath === p || earlyPath.startsWith(p + '/') || earlyPath.startsWith(p))
-    if (!hasBetaAccess && !isExempt) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/beta'
-      url.searchParams.set('next', earlyPath)
-      return NextResponse.redirect(url)
-    }
   }
 
   let supabaseResponse = NextResponse.next({ request })
