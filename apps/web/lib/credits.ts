@@ -14,7 +14,7 @@ import { computeKpiCredit, contractMrc } from './kpi-scoring'
 
 export type ClaimableCredits = { total: number; count: number }
 
-/** Credit recovery is a Professional-plan feature (free trial included). */
+/** Credit recovery is a Professional-and-above feature. */
 export async function orgHasCreditRecovery(orgId: string): Promise<boolean> {
   const [org] = await db
     .select({ plan: organisations.plan })

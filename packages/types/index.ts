@@ -114,17 +114,38 @@ export const PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
 }
 
 // ─── Plan feature gates ──────────────────────────────────────────────────────
-// The "money features" that differentiate Professional from Essentials.
-// Starter (free trial) gets everything within its tiny limits so evaluators
-// see the full product; Essentials trades those features for the low price.
+// Ladder: Starter (free) proves the core product — extraction, KPIs,
+// scorecards, dashboards — with the payoff features visible but locked.
+// Essentials adds the workflow features (alerts, reports, team); the two
+// "money features" (portal, credit recovery) are what justify Professional.
+// Locked features render an upgrade panel in the UI; these gates are also
+// enforced server-side, so the UI is never the only barrier.
 
-export type PlanFeature = 'vendorPortal' | 'creditRecovery'
+export type PlanFeature =
+  | 'vendorPortal'
+  | 'creditRecovery'
+  | 'renewalAlerts'
+  | 'reports'
+  | 'teamInvites'
+
+/** The plan that unlocks each feature — used by upgrade CTAs. */
+export const FEATURE_MIN_PLAN: Record<PlanFeature, Exclude<OrgPlan, 'starter'>> = {
+  vendorPortal: 'professional',
+  creditRecovery: 'professional',
+  renewalAlerts: 'essentials',
+  reports: 'essentials',
+  teamInvites: 'essentials',
+}
 
 export function planHasFeature(plan: OrgPlan | string, feature: PlanFeature): boolean {
   switch (feature) {
     case 'vendorPortal':
     case 'creditRecovery':
-      return plan === 'starter' || plan === 'professional' || plan === 'enterprise'
+      return plan === 'professional' || plan === 'enterprise'
+    case 'renewalAlerts':
+    case 'reports':
+    case 'teamInvites':
+      return plan === 'essentials' || plan === 'professional' || plan === 'enterprise'
     default:
       return false
   }

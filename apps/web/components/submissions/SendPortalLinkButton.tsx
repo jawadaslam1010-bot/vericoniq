@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/trpc/client'
-import { Send, Link2, Copy, Check, Loader2, ChevronDown } from 'lucide-react'
+import { Send, Link2, Copy, Check, Loader2, ChevronDown, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { planHasFeature } from '@contractly/types'
+import { LockedFeatureDialog } from '@/components/shared/locked-feature-dialog'
 
 type Props = {
   periodId: string
@@ -19,6 +21,10 @@ export function SendPortalLinkButton({ periodId, appUrl = '' }: Props) {
   const [sendEmail, setSendEmail] = useState(true)
   const [generatedToken, setGeneratedToken] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [showLocked, setShowLocked] = useState(false)
+
+  const { data: org } = api.team.getOrg.useQuery()
+  const portalUnlocked = planHasFeature(org?.plan ?? 'starter', 'vendorPortal')
 
   const generateToken = api.submissions.generateToken.useMutation()
 
@@ -125,14 +131,17 @@ export function SendPortalLinkButton({ periodId, appUrl = '' }: Props) {
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => setMode('form')}
-      className="gap-1.5"
-    >
-      <Send className="w-3.5 h-3.5" />
-      Send portal link
-    </Button>
+    <>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => (portalUnlocked ? setMode('form') : setShowLocked(true))}
+        className="gap-1.5"
+      >
+        {portalUnlocked ? <Send className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+        Send portal link
+      </Button>
+      <LockedFeatureDialog feature="vendorPortal" open={showLocked} onOpenChange={setShowLocked} />
+    </>
   )
 }

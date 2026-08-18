@@ -3,10 +3,11 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@contractly/db'
-import { contracts, vendors, users } from '@contractly/db/schema'
-import { eq, and, isNotNull } from '@contractly/db'
+import { contracts, vendors, users, organisations } from '@contractly/db/schema'
+import { eq, and, isNotNull, inArray } from '@contractly/db'
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendRenewalReminder } from '@/lib/email'
+import { planHasFeature } from '@contractly/types'
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 // Reminder stages in days-before-deadline, tightest last.
@@ -54,8 +55,24 @@ export async function GET(req: NextRequest) {
     .innerJoin(vendors, eq(contracts.vendorId, vendors.id))
     .where(and(eq(contracts.status, 'active'), isNotNull(contracts.noticeDeadline)))
 
+  // Renewal alert emails are a paid feature — skip orgs whose plan lacks it.
+  // The stage marker is NOT advanced for skipped orgs, so upgrading later
+  // delivers the tightest still-relevant reminder rather than silence.
+  const rowOrgIds = [...new Set(rows.map(c => c.orgId))]
+  const alertEligible = new Set<string>()
+  if (rowOrgIds.length > 0) {
+    const orgPlans = await db
+      .select({ id: organisations.id, plan: organisations.plan })
+      .from(organisations)
+      .where(inArray(organisations.id, rowOrgIds))
+    for (const o of orgPlans) {
+      if (planHasFeature(o.plan, 'renewalAlerts')) alertEligible.add(o.id)
+    }
+  }
+  const eligibleRows = rows.filter(c => alertEligible.has(c.orgId))
+
   // Which contracts have crossed a new, not-yet-notified stage
-  const due = rows.flatMap(c => {
+  const due = eligibleRows.flatMap(c => {
     if (!c.noticeDeadline) return []
     const days = daysUntil(c.noticeDeadline)
     const stage = stageFor(days)

@@ -3,8 +3,10 @@
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '@/lib/trpc/client'
-import { Link2, Send, Copy, Check, Loader2, ExternalLink, Eye, Clock, ChevronDown, ChevronUp } from 'lucide-react'
+import { Link2, Send, Copy, Check, Loader2, ExternalLink, Eye, Clock, ChevronDown, ChevronUp, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { planHasFeature } from '@contractly/types'
+import { LockedFeatureDialog } from '@/components/shared/locked-feature-dialog'
 
 type Props = {
   periodId: string
@@ -27,6 +29,10 @@ export function PortalLinksPanel({ periodId, appUrl }: Props) {
   const [sendEmail, setSendEmail] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [showLocked, setShowLocked] = useState(false)
+
+  const { data: org } = api.team.getOrg.useQuery()
+  const portalUnlocked = planHasFeature(org?.plan ?? 'starter', 'vendorPortal')
 
   const { data: tokens, isLoading, refetch } = api.submissions.listTokens.useQuery(
     { periodId },
@@ -202,16 +208,17 @@ export function PortalLinksPanel({ periodId, appUrl }: Props) {
               </div>
             ) : (
               <button
-                onClick={() => setShowForm(true)}
+                onClick={() => (portalUnlocked ? setShowForm(true) : setShowLocked(true))}
                 className="flex items-center gap-1.5 text-[12px] font-medium text-primary hover:text-primary/80 transition-colors"
               >
-                <Send className="w-3.5 h-3.5" />
+                {portalUnlocked ? <Send className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
                 Generate new portal link
               </button>
             )}
           </div>
         </div>
       )}
+      <LockedFeatureDialog feature="vendorPortal" open={showLocked} onOpenChange={setShowLocked} />
     </div>
   )
 }

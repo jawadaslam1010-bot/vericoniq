@@ -568,7 +568,7 @@ export default function LandingPage() {
               <div className="mt-3"><span style={{ fontFamily: SERIF, fontSize: '2.2rem' }}>$0</span></div>
               <p className="mt-1 text-xs" style={{ color: MUTED }}>3-month evaluation</p>
               <ul className="mt-5 space-y-2.5 text-sm flex-1" style={{ color: SOFT }}>
-                {['2 vendors, 3 contracts', 'Full AI extraction', 'Every feature, small scale', '100 MB storage'].map(x => (
+                {['2 vendors, 3 contracts', 'Full AI extraction', 'Scorecards & dashboards', '100 MB storage'].map(x => (
                   <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
                 ))}
               </ul>
@@ -585,7 +585,7 @@ export default function LandingPage() {
               </div>
               <p className="mt-1 text-xs" style={{ color: MUTED }}>or $990/year — two months free</p>
               <ul className="mt-5 space-y-2.5 text-sm flex-1" style={{ color: SOFT }}>
-                {['5 vendors, 15 contracts', 'AI extraction & SLA tracking', 'Scorecards & renewal alerts', '0.5 GB storage'].map(x => (
+                {['5 vendors, 15 contracts', 'Full AI extraction & scorecards', 'Renewal alerts & reports', 'Team access & roles', '0.5 GB storage'].map(x => (
                   <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
                 ))}
               </ul>
@@ -605,7 +605,7 @@ export default function LandingPage() {
               </div>
               <p className="mt-1 text-xs" style={{ color: MUTED }}>or $2,990/year — two months free</p>
               <ul className="mt-5 space-y-2.5 text-sm flex-1" style={{ color: SOFT }}>
-                {['25 vendors, 100 contracts', 'Everything in Essentials', 'Vendor submission portal', 'Service credit recovery', 'Team access & roles', '2 GB storage'].map(x => (
+                {['25 vendors, 100 contracts', 'Everything in Essentials', 'Vendor submission portal', 'Service credit recovery', '2 GB storage'].map(x => (
                   <li key={x} className="flex gap-2"><Check className="h-4 w-4 shrink-0" style={{ color: TEAL }} />{x}</li>
                 ))}
               </ul>

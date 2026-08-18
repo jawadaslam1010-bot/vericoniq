@@ -6,8 +6,10 @@ import { BarChart2 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/server'
 import { db } from '@contractly/db'
 import { eq, and, isNull, inArray } from '@contractly/db'
-import { users, vendors, contracts, kpiResults, submissionPeriods } from '@contractly/db/schema'
+import { users, vendors, contracts, kpiResults, submissionPeriods, organisations } from '@contractly/db/schema'
+import { planHasFeature } from '@contractly/types'
 import { PageTitle } from '@/components/shared/page-title'
+import { LockedFeaturePanel } from '@/components/shared/locked-feature'
 import { getClaimableCredits, orgHasCreditRecovery } from '@/lib/credits'
 import type { Metadata } from 'next'
 
@@ -31,6 +33,21 @@ export default async function ReportsPage() {
   const [userRecord] = await db.select().from(users).where(eq(users.id, authUser.id)).limit(1)
   if (!userRecord) redirect('/login')
   const orgId = userRecord.orgId
+
+  // Reports are an Essentials-and-above feature — free tier sees the upgrade panel.
+  const [orgRow] = await db
+    .select({ plan: organisations.plan })
+    .from(organisations)
+    .where(eq(organisations.id, orgId))
+    .limit(1)
+  if (!planHasFeature(orgRow?.plan ?? 'starter', 'reports')) {
+    return (
+      <div>
+        <PageTitle subtitle="Portfolio reporting across all your vendors and contracts">Reports</PageTitle>
+        <LockedFeaturePanel feature="reports" />
+      </div>
+    )
+  }
 
   const [allVendors, allContracts] = await Promise.all([
     db.select().from(vendors).where(and(eq(vendors.orgId, orgId), isNull(vendors.deletedAt))),

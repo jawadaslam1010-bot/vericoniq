@@ -4,6 +4,7 @@ import { eq, and, desc } from '@contractly/db'
 import { z } from 'zod'
 import { TRPCError } from '@trpc/server'
 import { randomBytes } from 'crypto'
+import { planHasFeature } from '@contractly/types'
 import { createAdminClient } from '@/lib/supabase/server'
 import { sendInvitation } from '@/lib/email'
 
@@ -73,6 +74,19 @@ export const teamRouter = router({
   invite: adminProcedure
     .input(z.object({ email: z.string().email(), role: roleEnum }))
     .mutation(async ({ ctx, input }) => {
+      // Team invitations are a paid feature.
+      const [orgPlan] = await ctx.db
+        .select({ plan: organisations.plan })
+        .from(organisations)
+        .where(eq(organisations.id, ctx.user.orgId))
+        .limit(1)
+      if (!planHasFeature(orgPlan?.plan ?? 'starter', 'teamInvites')) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Team invitations are available on the Essentials plan and above. Upgrade in Settings to invite your colleagues.',
+        })
+      }
+
       const email = input.email.trim().toLowerCase()
 
       // Reject a duplicate pending invitation for the same email.

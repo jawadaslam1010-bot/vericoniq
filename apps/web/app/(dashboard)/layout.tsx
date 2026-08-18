@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/server'
 import { db } from '@contractly/db'
 import { users, organisations } from '@contractly/db/schema'
 import { eq } from '@contractly/db'
+import { planHasFeature } from '@contractly/types'
 import { Sidebar } from '@/components/shared/sidebar'
 import { TopBar } from '@/components/shared/top-bar'
 import { MobileTabBar } from '@/components/shared/mobile-tab-bar'
@@ -101,8 +102,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
       )}
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
-        {/* Icon-rail sidebar — hidden on mobile */}
-        <Sidebar />
+        {/* Icon-rail sidebar — hidden on mobile. Locked nav items show a padlock. */}
+        <Sidebar
+          lockedIds={planHasFeature(orgRecord?.plan ?? 'starter', 'reports') ? [] : ['reports']}
+        />
 
         {/* Right column: top bar + scrollable main */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden">

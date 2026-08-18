@@ -4,6 +4,8 @@ import { useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2, UserPlus, X, Shield } from 'lucide-react'
 import { api } from '@/lib/trpc/client'
+import { planHasFeature } from '@contractly/types'
+import { LockedFeaturePanel } from '@/components/shared/locked-feature'
 import { BillingSection } from './BillingSection'
 
 type Role = 'admin' | 'manager' | 'viewer'
@@ -103,6 +105,8 @@ function TeamMembers({ isAdmin }: { isAdmin: boolean }) {
   const utils = api.useUtils()
   const { data: members, isLoading } = api.team.listMembers.useQuery()
   const { data: invites } = api.team.listInvitations.useQuery()
+  const { data: teamOrg } = api.team.getOrg.useQuery()
+  const canInvite = planHasFeature(teamOrg?.plan ?? 'starter', 'teamInvites')
 
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<Role>('viewer')
@@ -147,7 +151,13 @@ function TeamMembers({ isAdmin }: { isAdmin: boolean }) {
         )}
       </div>
 
-      {isAdmin && showInvite && (
+      {isAdmin && showInvite && !canInvite && (
+        <div className="mb-4">
+          <LockedFeaturePanel feature="teamInvites" compact />
+        </div>
+      )}
+
+      {isAdmin && showInvite && canInvite && (
         <div className="flex flex-col sm:flex-row gap-2 mb-4 p-3 rounded-lg bg-page border border-border-soft">
           <input
             type="email"

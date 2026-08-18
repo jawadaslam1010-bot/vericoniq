@@ -128,13 +128,25 @@ describe('essentials tier', () => {
 })
 
 describe('planHasFeature', () => {
-  it('essentials lacks portal and credit recovery; others have them', async () => {
+  it('portal and credit recovery are Professional-and-above', async () => {
     const { planHasFeature } = await import('@contractly/types')
-    expect(planHasFeature('essentials', 'vendorPortal')).toBe(false)
-    expect(planHasFeature('essentials', 'creditRecovery')).toBe(false)
-    for (const plan of ['starter', 'professional', 'enterprise']) {
+    for (const plan of ['starter', 'essentials']) {
+      expect(planHasFeature(plan, 'vendorPortal')).toBe(false)
+      expect(planHasFeature(plan, 'creditRecovery')).toBe(false)
+    }
+    for (const plan of ['professional', 'enterprise']) {
       expect(planHasFeature(plan, 'vendorPortal')).toBe(true)
       expect(planHasFeature(plan, 'creditRecovery')).toBe(true)
+    }
+  })
+
+  it('alerts, reports and team invites are Essentials-and-above', async () => {
+    const { planHasFeature } = await import('@contractly/types')
+    for (const feature of ['renewalAlerts', 'reports', 'teamInvites'] as const) {
+      expect(planHasFeature('starter', feature)).toBe(false)
+      for (const plan of ['essentials', 'professional', 'enterprise']) {
+        expect(planHasFeature(plan, feature)).toBe(true)
+      }
     }
   })
 })

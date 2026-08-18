@@ -10,6 +10,7 @@ import {
   BarChart2,
   Inbox,
   Settings,
+  Lock,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,7 +23,7 @@ const NAV_ITEMS = [
   { id: 'inbox',     href: '/inbox',      label: 'Inbox',      icon: Inbox },
 ]
 
-export function Sidebar() {
+export function Sidebar({ lockedIds = [] }: { lockedIds?: string[] }) {
   const pathname = usePathname()
 
   function isActive(item: typeof NAV_ITEMS[number]) {
@@ -58,8 +59,14 @@ export function Sidebar() {
               )}
             >
               <Icon className={cn('h-[18px] w-[18px]', active && 'stroke-[1.9]')} />
+              {lockedIds.includes(item.id) && (
+                <span className="absolute bottom-1 right-1 flex items-center justify-center w-3.5 h-3.5 rounded-full bg-surface border border-border">
+                  <Lock className="h-2 w-2 text-muted" />
+                </span>
+              )}
               <span className="pointer-events-none absolute left-full ml-2 z-50 whitespace-nowrap rounded-md bg-ink px-2.5 py-1.5 text-[11.5px] font-medium text-white opacity-0 translate-x-[-4px] transition-all duration-150 group-hover:opacity-100 group-hover:translate-x-0 shadow-md">
                 {item.label}
+                {lockedIds.includes(item.id) && ' · upgrade to unlock'}
               </span>
             </Link>
           )
