@@ -339,6 +339,14 @@ export default function PrivacyPage() {
             deleted it entirely, we would have no way of knowing not to contact you again.
           </p>
 
+          <SubHeading>Where it is stored</SubHeading>
+          <p>
+            Outreach records (the contact details listed above, the emails we send and any
+            replies) are kept in a separate database used only for outreach, run by Upstash
+            in its Sydney, Australia region. They are processed by our outreach system,
+            which is hosted on Vercel.
+          </p>
+
           <SubHeading>How long we keep it</SubHeading>
           <p>
             If you do not respond, we delete your outreach record within 12 months of our
@@ -368,8 +376,12 @@ export default function PrivacyPage() {
               text and drafting of outreach emails (United States).
             </li>
             <li>
-              <strong style={{ color: INK }}>Resend</strong>: sending service and outreach
-              emails (United States).
+              <strong style={{ color: INK }}>Upstash</strong>: database for outreach records
+              (Sydney, Australia).
+            </li>
+            <li>
+              <strong style={{ color: INK }}>Resend</strong>: sending and receiving service
+              and outreach emails (United States).
             </li>
             <li>
               <strong style={{ color: INK }}>Stripe</strong>: payment processing (United
