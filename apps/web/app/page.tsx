@@ -716,6 +716,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-6 text-xs" style={{ color: MUTED }}>
             <Link href="/about" className="hover:opacity-70">About</Link>
             <a href="#pricing" className="hover:opacity-70">Pricing</a>
+            <Link href="/privacy" className="hover:opacity-70">Privacy</Link>
             <Link href="/login" className="hover:opacity-70">Sign in</Link>
           </div>
         </div>

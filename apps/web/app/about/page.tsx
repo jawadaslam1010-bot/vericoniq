@@ -266,7 +266,10 @@ export default function AboutPage() {
           {' '}— or contact us above for a walkthrough.
         </p>
         <p className="mt-6 text-xs" style={{ color: '#a8a29e' }}>
-          © {new Date().getFullYear()} VericonIQ · vericoniq.com
+          © {new Date().getFullYear()} VericonIQ · vericoniq.com ·{' '}
+          <Link href="/privacy" className="underline underline-offset-2 hover:opacity-70">
+            Privacy
+          </Link>
         </p>
       </section>
     </div>

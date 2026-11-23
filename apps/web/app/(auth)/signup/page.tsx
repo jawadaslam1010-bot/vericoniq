@@ -220,6 +220,14 @@ export default function SignupPage() {
             Sign in
           </Link>
         </p>
+
+        <p className="text-center text-xs text-slate-400 mt-3">
+          See how we handle your data in our{' '}
+          <Link href="/privacy" className="underline hover:text-slate-600">
+            privacy notice
+          </Link>
+          .
+        </p>
       </CardContent>
     </Card>
   )

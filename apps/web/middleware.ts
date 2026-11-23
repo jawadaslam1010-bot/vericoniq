@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 const PUBLIC_PATHS = [
   '/',             // landing page
   '/about',        // public about page (also beta-gate exempt)
+  '/privacy',      // public privacy notice
   '/login',
   '/signup',
   '/auth/callback',
